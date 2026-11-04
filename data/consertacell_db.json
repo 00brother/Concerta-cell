@@ -1,0 +1,91 @@
+{
+  "settings": {
+    "companyName": "Conserta Cell",
+    "city": "Arapongas — Paraná",
+    "state": "PR",
+    "phone": "(43) 99837-0350",
+    "whatsapp": "(43) 99837-0350",
+    "whatsappUrl": "https://wa.me/5543998370350",
+    "address": "Arapongas, PR",
+    "hours": {
+      "weekday": "Segunda a sexta: 08h30 às 19h",
+      "saturday": "Sábado: 08h30 às 17h",
+      "sunday": "Domingo: fechado"
+    },
+    "aboutText": "A Conserta Cell está em Arapongas para ajudar você com assistência técnica e acessórios para celulares. Nosso objetivo é oferecer um atendimento claro, prático e atencioso em cada contato.",
+    "localDelivery": {
+      "enabled": true,
+      "fee": 10,
+      "estimatedTime": "Mesmo dia (pedidos confirmados até 16h) ou 1 dia útil",
+      "cepStart": "86700000",
+      "cepEnd": "86719999"
+    },
+    "correios": {
+      "enabled": true,
+      "originCep": "86700000",
+      "apiConfigured": false,
+      "apiKey": "",
+      "contractCode": "",
+      "fallbackNote": "Cálculo baseado na tabela de CEPs dos Correios (PAC e SEDEX). Conecte suas credenciais da API dos Correios ou Melhor Envio no painel."
+    },
+    "payment": {
+      "provider": "mercadopago",
+      "isConfigured": false,
+      "publicKey": "",
+      "accessToken": "",
+      "webhookSecret": "",
+      "maxInstallments": 21,
+      "maxInterestFree": 3,
+      "interestRateMonthly": 1.99,
+      "pixKey": "43998370350",
+      "pixKeyType": "phone",
+      "pixRecipientName": "Conserta Cell Arapongas"
+    }
+  },
+  "products": [],
+  "orders": [],
+  "auditLogs": [
+    {
+      "id": "236ced8e-7702-4a08-bfa1-1408efad4ca8",
+      "timestamp": "2026-11-04T22:43:59.142Z",
+      "action": "PRODUCT_DELETE",
+      "details": "Produto excluído: \"Cabo USB-C Teste\" por Administrador"
+    },
+    {
+      "id": "b21a179c-373d-4bbf-9618-6de1ceb98d84",
+      "timestamp": "2026-11-04T22:43:59.127Z",
+      "action": "ORDER_CREATE",
+      "details": "Novo pedido CC-1001 recebido - Total: R$ 35.00"
+    },
+    {
+      "id": "24985f6f-90f3-4a96-97ca-f7c4db1b9df4",
+      "timestamp": "2026-11-04T22:43:59.091Z",
+      "action": "PRODUCT_CREATE",
+      "details": "Produto criado: \"Cabo USB-C Teste\" (R$ 25) por Administrador"
+    },
+    {
+      "id": "b75626a7-f554-4c18-b4a7-113662f6b884",
+      "timestamp": "2026-11-04T22:43:51.946Z",
+      "action": "ADMIN_LOGIN",
+      "details": "Login realizado com sucesso por admin"
+    },
+    {
+      "id": "d9387d60-4c2d-4d58-ab09-062ebf006f30",
+      "timestamp": "2026-11-04T22:35:46.715Z",
+      "action": "ADMIN_LOGIN",
+      "details": "Login realizado com sucesso por admin"
+    },
+    {
+      "id": "f06c31f1-ddd4-4a4d-9dca-cd8837c3aebb",
+      "timestamp": "2026-11-04T22:35:27.250Z",
+      "action": "SYSTEM_INIT",
+      "details": "Base de dados inicializada para Conserta Cell."
+    }
+  ],
+  "admin": {
+    "username": "admin",
+    "passwordHash": "d0cdea465cf8756ca3fdcd0da50821c577dea8eb6cf71f5680b6be5344e1f1c5ef2b1d65df331c96b69420e9cdaab933fa3512744221e68fee213f599154c384",
+    "salt": "a3e9a7e15d4ed1398b5e17fc9e79cec6",
+    "name": "Administrador Conserta Cell"
+  }
+}

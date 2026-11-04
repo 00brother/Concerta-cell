@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-heading: 'Outfit', sans-serif;
+    --font-body: 'Plus Jakarta Sans', sans-serif;
+    --primary-red: #E50914;
+    --primary-red-hover: #b80710;
+    --primary-red-dark: #800000;
+    --dark-bg: #0A0A0A;
+    --dark-card: #141414;
+    --dark-card-border: #262626;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: #0A0A0A;
+    color: #F5F5F5;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0f0f0f;
+}
+::-webkit-scrollbar-thumb {
+  background: #2f2f2f;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #dc2626;
+}
+
+/* Hero Animations inspired by reference site */
+@keyframes logoIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes scrollCue {
+  0%, 100% {
+    transform: scaleY(0.35);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.animate-logo-in {
+  animation: logoIn 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.animate-cue {
+  animation: scrollCue 2s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: top;
+}
+

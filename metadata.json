@@ -1,0 +1,6 @@
+{
+  "name": "Conserta Cell - Acessórios e Manutenção de Celulares",
+  "description": "Loja virtual oficial da Conserta Cell em Arapongas/PR. Assistência técnica especializada e acessórios para celulares.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
