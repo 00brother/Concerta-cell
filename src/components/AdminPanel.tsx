@@ -50,8 +50,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Tabs: 'products' | 'orders' | 'settings' | 'logs'
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'settings' | 'logs'>('products');
+  // Tabs: 'products' | 'orders' | 'settings' | 'security' | 'logs'
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'settings' | 'security' | 'logs'>('products');
 
   // Products Data
   const [products, setProducts] = useState<Product[]>([]);
@@ -403,10 +403,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-6xl bg-[#121212] border border-[#2a2a2a] rounded-2xl shadow-2xl overflow-hidden my-4 flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 md:p-6 bg-black/90 sm:backdrop-blur-md overflow-hidden">
+      <div className="relative w-full h-full sm:h-auto sm:max-h-[92vh] max-w-6xl bg-[#121212] border-0 sm:border border-[#2a2a2a] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         {/* Top bar */}
-        <div className="p-4 sm:p-5 border-b border-[#262626] bg-[#171717] flex items-center justify-between">
+        <div className="p-3.5 sm:p-5 border-b border-[#262626] bg-[#171717] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-red-950/80 border border-red-700/60 flex items-center justify-center text-red-500">
               <Lock className="w-4 h-4" />
@@ -478,7 +478,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   value={usernameInput}
                   onChange={(e) => setUsernameInput(e.target.value)}
                   placeholder="Seu usuário de acesso"
-                  className="w-full bg-[#181818] border border-[#333333] text-white text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
+                  className="w-full bg-[#181818] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
                 />
               </div>
 
@@ -492,12 +492,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     value={passwordInput}
                     onChange={(e) => setPasswordInput(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-[#181818] border border-[#333333] text-white text-xs px-3.5 py-2.5 pr-10 rounded-xl focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
+                    className="w-full bg-[#181818] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 pr-10 rounded-xl focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
                   />
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 p-1 rounded-md transition-colors"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 p-1.5 rounded-md transition-colors"
                     title={showLoginPassword ? 'Ocultar senha' : 'Exibir senha'}
                   >
                     {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -525,52 +525,64 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           /* Logged In: Full Admin Dashboard */
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             {/* Sidebar Navigation */}
-            <div className="w-full md:w-56 bg-[#161616] border-b md:border-b-0 md:border-r border-[#262626] p-3 flex md:flex-col gap-1.5 shrink-0 overflow-x-auto">
+            <div className="w-full md:w-56 bg-[#161616] border-b md:border-b-0 md:border-r border-[#262626] p-2 sm:p-3 flex md:flex-col gap-1.5 shrink-0 overflow-x-auto scrollbar-none">
               <button
                 onClick={() => setActiveTab('products')}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
                   activeTab === 'products'
                     ? 'bg-[#E50914] text-white shadow-sm shadow-red-950/50'
                     : 'text-neutral-400 hover:text-white hover:bg-[#202020]'
                 }`}
               >
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingBag className="w-4 h-4 shrink-0" />
                 <span>Produtos & Estoque</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('orders')}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
                   activeTab === 'orders'
                     ? 'bg-[#E50914] text-white shadow-sm shadow-red-950/50'
                     : 'text-neutral-400 hover:text-white hover:bg-[#202020]'
                 }`}
               >
-                <Package className="w-4 h-4" />
+                <Package className="w-4 h-4 shrink-0" />
                 <span>Pedidos dos Clientes</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('settings')}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
                   activeTab === 'settings'
                     ? 'bg-[#E50914] text-white shadow-sm shadow-red-950/50'
                     : 'text-neutral-400 hover:text-white hover:bg-[#202020]'
                 }`}
               >
-                <SettingsIcon className="w-4 h-4" />
+                <SettingsIcon className="w-4 h-4 shrink-0" />
                 <span>Configurações & Frete</span>
               </button>
 
               <button
+                onClick={() => setActiveTab('security')}
+                className={`flex items-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                  activeTab === 'security'
+                    ? 'bg-[#E50914] text-white shadow-sm shadow-red-950/50'
+                    : 'text-neutral-400 hover:text-white hover:bg-[#202020]'
+                }`}
+              >
+                <Key className="w-4 h-4 shrink-0" />
+                <span>Segurança de Acesso</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('logs')}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
                   activeTab === 'logs'
                     ? 'bg-[#E50914] text-white shadow-sm shadow-red-950/50'
                     : 'text-neutral-400 hover:text-white hover:bg-[#202020]'
                 }`}
               >
-                <FileText className="w-4 h-4" />
+                <FileText className="w-4 h-4 shrink-0" />
                 <span>Auditoria & Logs</span>
               </button>
             </div>
@@ -830,9 +842,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           </label>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                           <div>
-                            <label className="block text-neutral-300 mb-1">Taxa de Entrega Local (R$)</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">Taxa de Entrega Local (R$)</label>
                             <input
                               type="number"
                               step="0.5"
@@ -846,12 +858,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   },
                                 })
                               }
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-neutral-300 mb-1">Prazo Estimado da Entrega Local</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">Prazo Estimado da Entrega Local</label>
                             <input
                               type="text"
                               value={settings.localDelivery.estimatedTime}
@@ -864,12 +876,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   },
                                 })
                               }
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-neutral-300 mb-1">Faixa de CEP Inicial Arapongas</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">Faixa de CEP Inicial Arapongas</label>
                             <input
                               type="text"
                               value={settings.localDelivery.cepStart}
@@ -882,12 +894,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   },
                                 })
                               }
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg font-mono"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono focus:border-red-500 focus:outline-none"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-neutral-300 mb-1">Faixa de CEP Final Arapongas</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">Faixa de CEP Final Arapongas</label>
                             <input
                               type="text"
                               value={settings.localDelivery.cepEnd}
@@ -900,18 +912,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   },
                                 })
                               }
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg font-mono"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono focus:border-red-500 focus:outline-none"
                             />
                           </div>
                         </div>
                       </div>
 
                       {/* Section: Correios Integration */}
-                      <div className="bg-[#141414] p-4 rounded-xl border border-[#262626] space-y-3">
+                      <div className="bg-[#141414] p-4 sm:p-5 rounded-2xl border border-[#262626] space-y-3.5">
                         <div className="flex items-center justify-between">
                           <h4 className="text-xs font-bold uppercase tracking-wider text-red-500 flex items-center gap-1.5">
                             <Truck className="w-4 h-4" />
-                            Correios (PAC & SEDEX) — Fora de Arapongas
+                            Correios (PAC & SEDEX) — Nacional
                           </h4>
                           <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
                             <input
@@ -932,9 +944,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           </label>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                           <div>
-                            <label className="block text-neutral-300 mb-1">CEP de Origem (Arapongas)</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">CEP de Origem (Arapongas)</label>
                             <input
                               type="text"
                               value={settings.correios.originCep}
@@ -947,12 +959,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   },
                                 })
                               }
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg font-mono"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono focus:border-red-500 focus:outline-none"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-neutral-300 mb-1">Código de Contrato / Cartão Correios</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">Código de Contrato / Cartão Correios</label>
                             <input
                               type="text"
                               value={settings.correios.contractCode || ''}
@@ -966,12 +978,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 })
                               }
                               placeholder="Opcional se possuir contrato"
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none"
                             />
                           </div>
 
                           <div className="sm:col-span-2">
-                            <label className="block text-neutral-300 mb-1">Chave / Token API Correios ou Melhor Envio</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">Chave / Token API Correios ou Melhor Envio</label>
                             <input
                               type="password"
                               value={settings.correios.apiKey || ''}
@@ -986,25 +998,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 })
                               }
                               placeholder="Insira o token quando contratado pelo lojista"
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg font-mono text-xs"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono focus:border-red-500 focus:outline-none"
                             />
                             <p className="text-[11px] text-neutral-400 mt-1">
-                              * Se a chave não for informada, o sistema utiliza a tabela postal padrão dos Correios e avisa claramente o comprador.
+                              * Se a chave não for informada, o sistema utiliza a tabela postal padrão oficial dos Correios por peso e dimensões.
                             </p>
                           </div>
                         </div>
                       </div>
 
                       {/* Section: Payment Gateway & Installments */}
-                      <div className="bg-[#141414] p-4 rounded-xl border border-[#262626] space-y-3">
+                      <div className="bg-[#141414] p-4 sm:p-5 rounded-2xl border border-[#262626] space-y-3.5">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-red-500 flex items-center gap-1.5">
                           <CreditCard className="w-4 h-4" />
-                          Pagamentos & Parcelamento
+                          Pagamentos & Mercado Pago
                         </h4>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                           <div>
-                            <label className="block text-neutral-300 mb-1">Chave PIX da Conserta Cell</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">Chave PIX da Conserta Cell</label>
                             <input
                               type="text"
                               value={settings.payment.pixKey || ''}
@@ -1018,12 +1030,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 })
                               }
                               placeholder="(43) 99837-0350"
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg font-mono"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono focus:border-red-500 focus:outline-none"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-neutral-300 mb-1">Nome do Favorecido no PIX</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">Nome do Favorecido no PIX</label>
                             <input
                               type="text"
                               value={settings.payment.pixRecipientName || ''}
@@ -1037,12 +1049,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 })
                               }
                               placeholder="Conserta Cell Arapongas"
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-neutral-300 mb-1">Máximo de Parcelas Sem Juros</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">Máximo de Parcelas Sem Juros</label>
                             <input
                               type="number"
                               min="1"
@@ -1057,13 +1069,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   },
                                 })
                               }
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none"
                             />
                             <span className="text-[10px] text-neutral-400">Requisito da loja: até 3x sem juros</span>
                           </div>
 
                           <div>
-                            <label className="block text-neutral-300 mb-1">Máximo Total de Parcelas (Cartão)</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">Máximo Total de Parcelas (Cartão)</label>
                             <input
                               type="number"
                               min="1"
@@ -1078,20 +1090,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                   },
                                 })
                               }
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none"
                             />
                             <span className="text-[10px] text-neutral-400">Requisito da loja: possibilidade até 21x</span>
                           </div>
 
-                          <div className="sm:col-span-2 pt-2 border-t border-[#222222]">
-                            <p className="text-neutral-300 font-semibold mb-1">Gateway de Pagamento (Mercado Pago)</p>
-                            <p className="text-[11px] text-neutral-400 mb-2">
-                              A empresa ainda não possui conta em gateway de pagamento. Quando a conta for criada pelo proprietário, cole as credenciais abaixo:
+                          <div className="sm:col-span-2 pt-3 border-t border-[#222222]">
+                            <p className="text-neutral-200 font-semibold mb-1">Chaves do Mercado Pago Developers</p>
+                            <p className="text-[11px] text-neutral-400 mb-2 leading-relaxed">
+                              Ao criar uma aplicação no portal do <strong>Mercado Pago Developers</strong>, cole as duas chaves abaixo para ativação instantânea do PIX com baixa automática e cartão de crédito parcelado:
                             </p>
                           </div>
 
                           <div>
-                            <label className="block text-neutral-300 mb-1">Mercado Pago Public Key (Frontend)</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">Mercado Pago Public Key (Frontend)</label>
                             <input
                               type="text"
                               value={settings.payment.publicKey || ''}
@@ -1105,12 +1117,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 })
                               }
                               placeholder="APP_USR-..."
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg font-mono text-xs"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono focus:border-red-500 focus:outline-none"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-neutral-300 mb-1">Mercado Pago Access Token (Backend Seguro)</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">Mercado Pago Access Token (Backend Seguro)</label>
                             <input
                               type="password"
                               value={settings.payment.accessToken || ''}
@@ -1125,206 +1137,212 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 })
                               }
                               placeholder="APP_USR-..."
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg font-mono text-xs"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono focus:border-red-500 focus:outline-none"
                             />
                           </div>
                         </div>
                       </div>
 
                       {/* Save Settings Button */}
-                      <button
-                        type="submit"
-                        className="flex items-center gap-2 bg-[#E50914] hover:bg-[#c80812] text-white px-6 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shadow-red-950/40 cursor-pointer"
-                      >
-                        <Save className="w-4 h-4" />
-                        <span>Salvar Configurações da Loja</span>
-                      </button>
+                      <div className="pt-2">
+                        <button
+                          type="submit"
+                          className="flex items-center justify-center gap-2 bg-[#E50914] hover:bg-[#c80812] active:scale-98 text-white px-7 py-3.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-lg shadow-red-950/50 cursor-pointer w-full sm:w-auto"
+                        >
+                          <Save className="w-4 h-4" />
+                          <span>Salvar Configurações da Loja</span>
+                        </button>
+                      </div>
                     </form>
                   )}
+                </div>
+              )}
 
-                  {/* Admin Credentials & Security Management */}
-                  <div className="bg-[#141414] p-5 rounded-xl border border-[#2a2a2a] space-y-4 pt-4 shadow-xl">
-                    <div className="flex items-center gap-2.5 pb-2 border-b border-[#242424]">
+              {/* TAB 4: SECURITY & CREDENTIALS (DEDICATED SCREEN) */}
+              {activeTab === 'security' && (
+                <div className="space-y-6 max-w-2xl">
+                  <div className="pb-3 border-b border-[#262626]">
+                    <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-lg bg-red-950/60 border border-red-800/60 flex items-center justify-center text-red-500">
                         <Key className="w-4 h-4" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                          Segurança do Lojista — Credenciais de Acesso
+                        <h3 className="text-base font-bold text-white flex items-center gap-2">
+                          Segurança de Acesso do Lojista
                           <span className="text-[10px] font-normal bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 px-2 py-0.5 rounded">
                             Hash scrypt ativo
                           </span>
-                        </h4>
-                        <p className="text-[11px] text-neutral-400">
-                          Altere o usuário administrador ou defina uma nova senha protegida contra ataques de dicionário e força bruta.
+                        </h3>
+                        <p className="text-xs text-neutral-400">
+                          Altere seu usuário de login ou defina uma nova senha protegida contra ataques de força bruta.
                         </p>
                       </div>
                     </div>
+                  </div>
 
-                    {credentialsMsg && (
-                      <div
-                        className={`p-3.5 rounded-xl text-xs flex items-start gap-2.5 ${
-                          credentialsMsg.type === 'success'
-                            ? 'bg-emerald-950/70 border border-emerald-700/80 text-emerald-200'
-                            : 'bg-red-950/70 border border-red-700/80 text-red-200'
-                        }`}
-                      >
-                        {credentialsMsg.type === 'success' ? (
-                          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                        ) : (
-                          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                        )}
-                        <span className="leading-relaxed">{credentialsMsg.text}</span>
+                  {credentialsMsg && (
+                    <div
+                      className={`p-3.5 rounded-xl text-xs flex items-start gap-2.5 ${
+                        credentialsMsg.type === 'success'
+                          ? 'bg-emerald-950/70 border border-emerald-700/80 text-emerald-200'
+                          : 'bg-red-950/70 border border-red-700/80 text-red-200'
+                      }`}
+                    >
+                      {credentialsMsg.type === 'success' ? (
+                        <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                      )}
+                      <span className="leading-relaxed">{credentialsMsg.text}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleUpdateCredentials} className="bg-[#141414] p-5 sm:p-6 rounded-2xl border border-[#2a2a2a] space-y-4 shadow-xl">
+                    {/* Current Password - Required for any security changes */}
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-200 mb-1">
+                        Senha Atual do Administrador <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showCurrentPassword ? 'text' : 'password'}
+                          required
+                          value={currentPasswordInput}
+                          onChange={(e) => setCurrentPasswordInput(e.target.value)}
+                          placeholder="Digite sua senha atual para autorizar"
+                          className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 pr-10 rounded-xl focus:outline-none focus:border-red-500 transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 p-1.5 rounded-md transition-colors"
+                        >
+                          {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
                       </div>
-                    )}
+                      <p className="text-[10px] text-neutral-500 mt-1">
+                        Exigido para qualquer alteração por motivos de conformidade e segurança.
+                      </p>
+                    </div>
 
-                    <form onSubmit={handleUpdateCredentials} className="space-y-4 max-w-xl">
-                      {/* Current Password - Required for any security changes */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 border-t border-[#222222]">
+                      {/* New Username */}
                       <div>
-                        <label className="block text-xs font-semibold text-neutral-200 mb-1">
-                          Senha Atual do Administrador <span className="text-red-500">*</span>
+                        <label className="block text-xs font-semibold text-neutral-300 mb-1">
+                          Novo Usuário (Opcional)
+                        </label>
+                        <input
+                          type="text"
+                          value={newUsernameInput}
+                          onChange={(e) => setNewUsernameInput(e.target.value)}
+                          placeholder="Ex: conserta_admin"
+                          className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500 transition-colors"
+                        />
+                        <span className="text-[10px] text-neutral-500 block mt-1">Mínimo 4 caracteres (deixe em branco para manter)</span>
+                      </div>
+
+                      {/* New Password */}
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-300 mb-1">
+                          Nova Senha (Opcional)
                         </label>
                         <div className="relative">
                           <input
-                            type={showCurrentPassword ? 'text' : 'password'}
-                            required
-                            value={currentPasswordInput}
-                            onChange={(e) => setCurrentPasswordInput(e.target.value)}
-                            placeholder="Digite sua senha atual para autorizar"
-                            className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3.5 py-2.5 pr-10 rounded-xl focus:outline-none focus:border-red-500 transition-colors"
+                            type={showNewPassword ? 'text' : 'password'}
+                            value={newPasswordInput}
+                            onChange={(e) => setNewPasswordInput(e.target.value)}
+                            placeholder="••••••••"
+                            className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 pr-10 rounded-xl focus:outline-none focus:border-red-500 transition-colors"
                           />
                           <button
                             type="button"
-                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 p-1 rounded-md transition-colors"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 p-1.5 rounded-md transition-colors"
                           >
-                            {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
                         </div>
-                        <p className="text-[10px] text-neutral-500 mt-1">
-                          Exigido para qualquer alteração por motivos de conformidade e segurança.
-                        </p>
+                        <span className="text-[10px] text-neutral-500 block mt-1">Deixe em branco para manter a senha atual</span>
                       </div>
+                    </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#222222]">
-                        {/* New Username */}
-                        <div>
-                          <label className="block text-xs font-semibold text-neutral-300 mb-1">
-                            Novo Usuário (Opcional)
-                          </label>
-                          <input
-                            type="text"
-                            value={newUsernameInput}
-                            onChange={(e) => setNewUsernameInput(e.target.value)}
-                            placeholder="Ex: conserta_admin"
-                            className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500 transition-colors"
-                          />
-                          <span className="text-[10px] text-neutral-500">Mínimo 4 caracteres (deixe em branco para manter)</span>
+                    {/* Password Requirements Checklist (shown when typing a new password) */}
+                    {newPasswordInput && (
+                      <div className="p-3.5 bg-[#181818] rounded-xl border border-[#282828] space-y-2.5">
+                        <p className="text-[11px] font-bold text-neutral-300">
+                          Requisitos de Complexidade da Nova Senha:
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+                          <div className={`flex items-center gap-1.5 ${hasMinLen ? 'text-emerald-400' : 'text-neutral-500'}`}>
+                            <Check className={`w-3.5 h-3.5 ${hasMinLen ? 'text-emerald-400' : 'text-neutral-600'}`} />
+                            <span>Mínimo 8 caracteres ({newPasswordInput.length}/8)</span>
+                          </div>
+                          <div className={`flex items-center gap-1.5 ${hasUpper ? 'text-emerald-400' : 'text-neutral-500'}`}>
+                            <Check className={`w-3.5 h-3.5 ${hasUpper ? 'text-emerald-400' : 'text-neutral-600'}`} />
+                            <span>Letra maiúscula (A-Z)</span>
+                          </div>
+                          <div className={`flex items-center gap-1.5 ${hasLower ? 'text-emerald-400' : 'text-neutral-500'}`}>
+                            <Check className={`w-3.5 h-3.5 ${hasLower ? 'text-emerald-400' : 'text-neutral-600'}`} />
+                            <span>Letra minúscula (a-z)</span>
+                          </div>
+                          <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-400' : 'text-neutral-500'}`}>
+                            <Check className={`w-3.5 h-3.5 ${hasNumber ? 'text-emerald-400' : 'text-neutral-600'}`} />
+                            <span>Número (0-9)</span>
+                          </div>
+                          <div className={`flex items-center gap-1.5 ${hasSpecial ? 'text-emerald-400' : 'text-neutral-500'}`}>
+                            <Check className={`w-3.5 h-3.5 ${hasSpecial ? 'text-emerald-400' : 'text-neutral-600'}`} />
+                            <span>Símbolo especial (!@#$%&*)</span>
+                          </div>
                         </div>
 
-                        {/* New Password */}
-                        <div>
+                        {/* Confirm Password */}
+                        <div className="pt-2 border-t border-[#262626]">
                           <label className="block text-xs font-semibold text-neutral-300 mb-1">
-                            Nova Senha (Opcional)
+                            Confirmar Nova Senha
                           </label>
                           <div className="relative">
                             <input
-                              type={showNewPassword ? 'text' : 'password'}
-                              value={newPasswordInput}
-                              onChange={(e) => setNewPasswordInput(e.target.value)}
-                              placeholder="••••••••"
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3.5 py-2.5 pr-10 rounded-xl focus:outline-none focus:border-red-500 transition-colors"
+                              type={showConfirmPassword ? 'text' : 'password'}
+                              value={confirmPasswordInput}
+                              onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                              placeholder="Digite novamente a nova senha"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 pr-10 rounded-xl focus:outline-none focus:border-red-500 transition-colors"
                             />
                             <button
                               type="button"
-                              onClick={() => setShowNewPassword(!showNewPassword)}
-                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 p-1 rounded-md transition-colors"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 p-1.5 rounded-md transition-colors"
                             >
-                              {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
                           </div>
-                          <span className="text-[10px] text-neutral-500">Deixe em branco para manter a senha atual</span>
+                          {confirmPasswordInput && (
+                            <p
+                              className={`text-[10px] mt-1 font-semibold ${
+                                isPasswordMatching ? 'text-emerald-400' : 'text-red-400'
+                              }`}
+                            >
+                              {isPasswordMatching ? '✓ As senhas conferem.' : '✗ As senhas não conferem.'}
+                            </p>
+                          )}
                         </div>
                       </div>
+                    )}
 
-                      {/* Password Requirements Checklist (shown when typing a new password) */}
-                      {newPasswordInput && (
-                        <div className="p-3 bg-[#181818] rounded-xl border border-[#282828] space-y-2">
-                          <p className="text-[11px] font-bold text-neutral-300">
-                            Requisitos de Complexidade da Nova Senha:
-                          </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
-                            <div className={`flex items-center gap-1.5 ${hasMinLen ? 'text-emerald-400' : 'text-neutral-500'}`}>
-                              <Check className={`w-3.5 h-3.5 ${hasMinLen ? 'text-emerald-400' : 'text-neutral-600'}`} />
-                              <span>Mínimo 8 caracteres ({newPasswordInput.length}/8)</span>
-                            </div>
-                            <div className={`flex items-center gap-1.5 ${hasUpper ? 'text-emerald-400' : 'text-neutral-500'}`}>
-                              <Check className={`w-3.5 h-3.5 ${hasUpper ? 'text-emerald-400' : 'text-neutral-600'}`} />
-                              <span>Letra maiúscula (A-Z)</span>
-                            </div>
-                            <div className={`flex items-center gap-1.5 ${hasLower ? 'text-emerald-400' : 'text-neutral-500'}`}>
-                              <Check className={`w-3.5 h-3.5 ${hasLower ? 'text-emerald-400' : 'text-neutral-600'}`} />
-                              <span>Letra minúscula (a-z)</span>
-                            </div>
-                            <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-400' : 'text-neutral-500'}`}>
-                              <Check className={`w-3.5 h-3.5 ${hasNumber ? 'text-emerald-400' : 'text-neutral-600'}`} />
-                              <span>Número (0-9)</span>
-                            </div>
-                            <div className={`flex items-center gap-1.5 ${hasSpecial ? 'text-emerald-400' : 'text-neutral-500'}`}>
-                              <Check className={`w-3.5 h-3.5 ${hasSpecial ? 'text-emerald-400' : 'text-neutral-600'}`} />
-                              <span>Símbolo especial (!@#$%&*)</span>
-                            </div>
-                          </div>
-
-                          {/* Confirm Password */}
-                          <div className="pt-2 border-t border-[#262626]">
-                            <label className="block text-xs font-semibold text-neutral-300 mb-1">
-                              Confirmar Nova Senha
-                            </label>
-                            <div className="relative">
-                              <input
-                                type={showConfirmPassword ? 'text' : 'password'}
-                                value={confirmPasswordInput}
-                                onChange={(e) => setConfirmPasswordInput(e.target.value)}
-                                placeholder="Digite novamente a nova senha"
-                                className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3.5 py-2.5 pr-10 rounded-xl focus:outline-none focus:border-red-500 transition-colors"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-200 p-1 rounded-md transition-colors"
-                              >
-                                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                              </button>
-                            </div>
-                            {confirmPasswordInput && (
-                              <p
-                                className={`text-[10px] mt-1 font-semibold ${
-                                  isPasswordMatching ? 'text-emerald-400' : 'text-red-400'
-                                }`}
-                              >
-                                {isPasswordMatching ? '✓ As senhas conferem.' : '✗ As senhas não conferem.'}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="pt-2">
-                        <button
-                          type="submit"
-                          disabled={credentialsLoading || (Boolean(newPasswordInput) && (!isNewPasswordValid || !isPasswordMatching))}
-                          className="bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-md"
-                        >
-                          <ShieldCheck className="w-4 h-4 text-red-500" />
-                          <span>{credentialsLoading ? 'Atualizando credenciais...' : 'Atualizar Credenciais de Acesso'}</span>
-                        </button>
-                        <p className="text-[10px] text-neutral-500 mt-1.5">
-                          Nota: Ao alterar as credenciais, todas as sessões anteriores serão invalidadas e você será redirecionado para a tela de login.
-                        </p>
-                      </div>
-                    </form>
-                  </div>
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={credentialsLoading || (Boolean(newPasswordInput) && (!isNewPasswordValid || !isPasswordMatching))}
+                        className="bg-[#E50914] hover:bg-[#c80812] disabled:opacity-40 text-white px-6 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-red-950/50 w-full sm:w-auto"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>{credentialsLoading ? 'Atualizando credenciais...' : 'Atualizar Credenciais de Acesso'}</span>
+                      </button>
+                      <p className="text-[10px] text-neutral-500 mt-2">
+                        Nota: Ao alterar as credenciais, todas as sessões anteriores serão invalidadas e você será desconectado para entrar com os novos dados.
+                      </p>
+                    </div>
+                  </form>
                 </div>
               )}
 
@@ -1385,17 +1403,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   value={prodForm.name}
                   onChange={(e) => setProdForm({ ...prodForm, name: e.target.value })}
                   placeholder="Ex: Carregador Rápido 20W USB-C"
-                  className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg focus:border-red-500 focus:outline-none"
+                  className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-neutral-300 mb-1">Categoria *</label>
+                  <label className="block text-neutral-300 mb-1 font-medium">Categoria *</label>
                   <select
                     value={prodForm.category}
                     onChange={(e) => setProdForm({ ...prodForm, category: e.target.value })}
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl"
                   >
                     <option value="Capinhas & Películas">Capinhas & Películas</option>
                     <option value="Carregadores & Cabos">Carregadores & Cabos</option>
@@ -1408,21 +1426,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-neutral-300 mb-1">Estoque Disponível *</label>
+                  <label className="block text-neutral-300 mb-1 font-medium">Estoque Disponível *</label>
                   <input
                     type="number"
                     required
                     min="0"
                     value={prodForm.stock}
                     onChange={(e) => setProdForm({ ...prodForm, stock: e.target.value })}
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg font-mono"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-neutral-300 mb-1">Preço Normal (R$) *</label>
+                  <label className="block text-neutral-300 mb-1 font-medium">Preço Normal (R$) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1430,44 +1448,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     value={prodForm.price}
                     onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })}
                     placeholder="49.90"
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg font-mono"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-neutral-300 mb-1">Preço Promo (R$)</label>
+                  <label className="block text-neutral-300 mb-1 font-medium">Preço Promo (R$)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={prodForm.promotionalPrice}
                     onChange={(e) => setProdForm({ ...prodForm, promotionalPrice: e.target.value })}
                     placeholder="Opcional"
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg font-mono"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-neutral-300 mb-1">Peso (kg) Correios</label>
+                  <label className="block text-neutral-300 mb-1 font-medium">Peso (kg) Correios</label>
                   <input
                     type="number"
                     step="0.05"
                     value={prodForm.weightKg}
                     onChange={(e) => setProdForm({ ...prodForm, weightKg: e.target.value })}
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg font-mono"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono"
                   />
                 </div>
               </div>
 
               {/* Photo Upload / URL */}
               <div>
-                <label className="block text-neutral-300 mb-1">Foto do Produto (URL ou Enviar Imagem)</label>
+                <label className="block text-neutral-300 mb-1 font-medium">Foto do Produto (URL ou Enviar Imagem)</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={prodForm.imageUrl}
                     onChange={(e) => setProdForm({ ...prodForm, imageUrl: e.target.value })}
                     placeholder="https://... ou faça upload"
-                    className="flex-1 bg-[#1b1b1b] border border-[#333333] text-white p-2 rounded-lg text-xs"
+                    className="flex-1 bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl"
                   />
                   <label className="cursor-pointer bg-[#222222] hover:bg-neutral-700 text-white px-3 py-2 rounded-lg font-semibold flex items-center gap-1.5 shrink-0">
                     <Upload className="w-3.5 h-3.5" />

@@ -294,10 +294,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-xl bg-[#141414] border border-[#262626] rounded-2xl shadow-2xl overflow-hidden my-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/85 sm:backdrop-blur-md overflow-hidden">
+      <div className="relative w-full h-full sm:h-auto sm:max-h-[90vh] max-w-xl bg-[#141414] border-0 sm:border border-[#262626] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-[#222222] bg-[#181818] flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-[#222222] bg-[#181818] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <Lock className="w-4 h-4 text-red-500" />
             <h2 className="text-sm sm:text-base font-bold text-white">
@@ -313,7 +313,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         </div>
 
         {errorMsg && (
-          <div className="mx-4 sm:mx-6 mt-4 p-3 bg-red-950/60 border border-red-700/80 rounded-xl text-red-200 text-xs flex items-center gap-2">
+          <div className="mx-4 sm:mx-6 mt-4 p-3 bg-red-950/60 border border-red-700/80 rounded-xl text-red-200 text-xs flex items-center gap-2 shrink-0">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
@@ -321,7 +321,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
         {/* Form View */}
         {step === 'form' ? (
-          <form onSubmit={handleProceedToReview} className="p-4 sm:p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+          <form onSubmit={handleProceedToReview} className="p-4 sm:p-6 space-y-5 flex-1 overflow-y-auto overscroll-contain">
             {/* 1. Customer Info */}
             <div className="space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-red-500 pb-1 border-b border-[#222222]">
@@ -336,7 +336,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                     placeholder="Nome e Sobrenome"
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-red-500"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
                   />
                 </div>
 
@@ -349,7 +349,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     onChange={handleCpfChange}
                     placeholder="000.000.000-00"
                     maxLength={14}
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-red-500 font-mono"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500 font-mono"
                   />
                 </div>
 
@@ -362,7 +362,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     onChange={handlePhoneChange}
                     placeholder="(43) 90000-0000"
                     maxLength={15}
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-red-500 font-mono"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500 font-mono"
                   />
                 </div>
 
@@ -374,7 +374,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="seuemail@exemplo.com"
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-red-500"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
                   />
                 </div>
               </div>
@@ -397,7 +397,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     onChange={handleCepChange}
                     placeholder="86700-000"
                     maxLength={9}
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-red-500 font-mono"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500 font-mono"
                   />
                 </div>
 
@@ -409,7 +409,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={formData.street}
                     onChange={(e) => setFormData({ ...formData, street: e.target.value })}
                     placeholder="Rua / Avenida"
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-red-500"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
                   />
                 </div>
 
@@ -421,7 +421,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={formData.number}
                     onChange={(e) => setFormData({ ...formData, number: e.target.value })}
                     placeholder="123"
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-red-500"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
                   />
                 </div>
 
@@ -433,7 +433,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={formData.neighborhood}
                     onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
                     placeholder="Bairro"
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-red-500"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
                   />
                 </div>
 
@@ -444,7 +444,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={formData.complement}
                     onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
                     placeholder="Apto, Bloco..."
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-red-500"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
                   />
                 </div>
 
@@ -455,7 +455,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     required
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-red-500"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
                   />
                 </div>
 
@@ -467,7 +467,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     maxLength={2}
                     value={formData.state}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-red-500"
+                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
                   />
                 </div>
               </div>
