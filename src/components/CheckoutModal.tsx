@@ -14,6 +14,14 @@ import {
 import { useCart } from '../context/CartContext.tsx';
 import type { CustomerInfo, Order, ShippingOption, StoreSettings } from '../types/index.ts';
 import { api } from '../services/api.ts';
+import {
+  validateCPF,
+  validateFullName,
+  validateEmail,
+  validatePhone,
+  validateLuhn,
+  validateCardExpiry,
+} from '../utils/validation.ts';
 
 interface CheckoutModalProps {
   settings: StoreSettings | null;
@@ -187,51 +195,81 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     e.preventDefault();
     setErrorMsg('');
 
-    if (!formData.fullName.trim() || formData.fullName.trim().split(' ').length < 2) {
-      setErrorMsg('Informe seu nome completo.');
+    // 1. Validação de Nome Completo
+    const nameCheck = validateFullName(formData.fullName);
+    if (!nameCheck.valid) {
+      setErrorMsg(nameCheck.error || 'Informe seu nome e sobrenome completos.');
       return;
     }
-    if (formData.cpf.replace(/\D/g, '').length !== 11) {
-      setErrorMsg('Informe um CPF válido.');
+
+    // 2. Validação Oficial de CPF (Módulo 11 com 2 dígitos verificadores)
+    if (!validateCPF(formData.cpf)) {
+      setErrorMsg('CPF inválido. Por favor, informe um CPF real com dígitos verificadores válidos.');
       return;
     }
-    if (!formData.email.includes('@')) {
-      setErrorMsg('Informe um e-mail válido.');
+
+    // 3. Validação de E-mail
+    if (!validateEmail(formData.email)) {
+      setErrorMsg('E-mail inválido. Por favor, informe um e-mail válido (exemplo: seunome@gmail.com).');
       return;
     }
-    if (formData.phone.replace(/\D/g, '').length < 10) {
-      setErrorMsg('Informe seu telefone/WhatsApp com DDD.');
+
+    // 4. Validação de Telefone / WhatsApp com DDD real do Brasil
+    const phoneCheck = validatePhone(formData.phone);
+    if (!phoneCheck.valid) {
+      setErrorMsg(phoneCheck.error || 'Telefone/WhatsApp inválido. Informe o DDD e o número completo.');
       return;
     }
-    if (formData.cep.replace(/\D/g, '').length !== 8) {
-      setErrorMsg('Informe um CEP válido com 8 dígitos.');
+
+    // 5. Validação de CEP
+    const cleanCep = formData.cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8 || /^(\d)\1{7}$/.test(cleanCep)) {
+      setErrorMsg('Informe um CEP válido com 8 dígitos numéricos.');
       return;
     }
-    if (!formData.street.trim() || !formData.number.trim() || !formData.neighborhood.trim()) {
-      setErrorMsg('Preencha seu endereço completo (Rua, Número e Bairro).');
+
+    // 6. Validação de Endereço Completo
+    if (!formData.street.trim() || formData.street.trim().length < 3) {
+      setErrorMsg('Informe o nome da sua rua ou avenida.');
       return;
     }
+    if (!formData.number.trim()) {
+      setErrorMsg('Informe o número do endereço (ou digite S/N se não houver número).');
+      return;
+    }
+    if (!formData.neighborhood.trim() || formData.neighborhood.trim().length < 2) {
+      setErrorMsg('Informe o bairro de entrega.');
+      return;
+    }
+    if (!formData.city.trim() || !formData.state.trim()) {
+      setErrorMsg('Cidade e Estado de entrega incompletos.');
+      return;
+    }
+
     if (!shippingOption) {
       setErrorMsg('Aguarde o cálculo e selecione uma modalidade de envio.');
       return;
     }
 
+    // 7. Validação de Cartão de Crédito (se selecionado)
     if (paymentMethod === 'credit_card') {
       const cleanCard = cardNumber.replace(/\D/g, '');
-      if (cleanCard.length < 15) {
-        setErrorMsg('Informe um número de cartão de crédito válido.');
+      if (!validateLuhn(cleanCard)) {
+        setErrorMsg('Número de cartão de crédito inválido. Verifique os números digitados.');
         return;
       }
-      if (!cardHolder.trim()) {
-        setErrorMsg('Informe o nome impresso no cartão.');
+      const holderCheck = validateFullName(cardHolder);
+      if (!holderCheck.valid) {
+        setErrorMsg('Informe o nome completo impresso no cartão de crédito.');
         return;
       }
-      if (cardExp.length < 5) {
-        setErrorMsg('Informe a validade do cartão (MM/AA).');
+      const expCheck = validateCardExpiry(cardExp);
+      if (!expCheck.valid) {
+        setErrorMsg(expCheck.error || 'Data de validade do cartão inválida.');
         return;
       }
-      if (cardCvv.length < 3) {
-        setErrorMsg('Informe o código de segurança (CVV).');
+      if (cardCvv.length < 3 || cardCvv.length > 4) {
+        setErrorMsg('Informe o código de segurança (CVV) com 3 ou 4 dígitos.');
         return;
       }
     }

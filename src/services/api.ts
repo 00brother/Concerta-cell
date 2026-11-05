@@ -7,6 +7,12 @@ import type {
   AuditLog,
 } from '../types/index.ts';
 import { cloudDb } from './firebase.ts';
+import {
+  validateCPF,
+  validateFullName,
+  validateEmail,
+  validatePhone,
+} from '../utils/validation.ts';
 
 const API_BASE = '/api';
 
@@ -260,6 +266,25 @@ export const api = {
 
   // Orders (Synced in Cloud Firestore)
   async createOrder(payload: any): Promise<Order> {
+    const customer = payload?.customer;
+    if (!customer) {
+      throw new Error('Dados do cliente não fornecidos.');
+    }
+    const nameCheck = validateFullName(customer.fullName || '');
+    if (!nameCheck.valid) {
+      throw new Error(nameCheck.error || 'Nome completo inválido.');
+    }
+    if (!validateCPF(customer.cpf || '')) {
+      throw new Error('CPF inválido. Verifique os números informados.');
+    }
+    if (!validateEmail(customer.email || '')) {
+      throw new Error('E-mail do cliente inválido.');
+    }
+    const phoneCheck = validatePhone(customer.phone || '');
+    if (!phoneCheck.valid) {
+      throw new Error(phoneCheck.error || 'Telefone/WhatsApp inválido.');
+    }
+
     const existingOrders = await cloudDb.getOrders();
     const count = existingOrders.length + 1001;
     const orderNumber = `CC-${count}`;
