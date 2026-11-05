@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CheckCircle2, Copy, Check, MessageCircle, Package } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2, Copy, Check, MessageCircle, Package, Send } from 'lucide-react';
 import type { Order, StoreSettings } from '../types/index.ts';
 
 interface OrderConfirmationModalProps {
@@ -16,6 +16,7 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
   onTrackOrder,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [autoOpened, setAutoOpened] = useState(false);
 
   if (!order) return null;
 
@@ -27,10 +28,61 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
     }
   };
 
-  const whatsappMessage = encodeURIComponent(
-    `Olá Conserta Cell! Acabei de fazer o pedido *${order.orderNumber}* no site (R$ ${order.total.toFixed(2).replace('.', ',')}) para entrega em ${order.customer.city}/${order.customer.state}. Segue o comprovante!`
-  );
-  const whatsappUrl = `https://wa.me/5543998370350?text=${whatsappMessage}`;
+  const rawPhone = (settings?.whatsapp || '43998370350').replace(/\D/g, '');
+  const cleanPhone = rawPhone.startsWith('55') ? rawPhone : `55${rawPhone}`;
+
+  const itemsList = (order.items || [])
+    .map(
+      (it) =>
+        `• ${it.quantity}x ${it.productName} — R$ ${(it.price * it.quantity).toFixed(2).replace('.', ',')}`
+    )
+    .join('\n');
+
+  const fullOrderText = [
+    `*NOVO PEDIDO NO SITE — CONSERTA CELL* 🛒`,
+    ``,
+    `*Pedido:* #${order.orderNumber}`,
+    `*Cliente:* ${order.customer.fullName}`,
+    `*WhatsApp do Cliente:* ${order.customer.phone}`,
+    `*CPF:* ${order.customer.cpf}`,
+    ``,
+    `*ITENS DO PEDIDO:*`,
+    itemsList || '• Itens do pedido',
+    ``,
+    `*Subtotal:* R$ ${order.subtotal.toFixed(2).replace('.', ',')}`,
+    `*Frete:* ${order.shippingSelection.title} (R$ ${order.shippingCost.toFixed(2).replace('.', ',')})`,
+    `*TOTAL:* R$ ${order.total.toFixed(2).replace('.', ',')}`,
+    `*Pagamento:* ${order.paymentMethod === 'pix' ? 'PIX' : 'Cartão de Crédito'}`,
+    ``,
+    `*ENDEREÇO DE ENTREGA:*`,
+    `${order.customer.street}, nº ${order.customer.number}${order.customer.complement ? ` (${order.customer.complement})` : ''}`,
+    `Bairro: ${order.customer.neighborhood}`,
+    `${order.customer.city} — ${order.customer.state}`,
+    `CEP: ${order.customer.cep}`,
+    `Prazo: ${order.shippingSelection.estimatedDays}`,
+    ``,
+    `Olá! Segue a notificação do pedido realizado no site e o comprovante.`,
+  ].join('\n');
+
+  const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(fullOrderText)}`;
+
+  useEffect(() => {
+    if (order && !autoOpened) {
+      // Dispara automaticamente a abertura do WhatsApp da loja em 1 segundo
+      const timer = setTimeout(() => {
+        setAutoOpened(true);
+        const link = document.createElement('a');
+        link.href = whatsappUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [order, autoOpened, whatsappUrl]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
@@ -52,6 +104,20 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
         </div>
 
         <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Automatic Dispatch Banner */}
+          <div className="bg-emerald-950/70 border border-emerald-600/70 p-3 rounded-xl flex items-center gap-2.5 text-emerald-200 text-xs shadow-md">
+            <span className="relative flex h-3 w-3 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <div className="leading-snug">
+              <strong className="text-white block font-semibold">Notificação Automática do Pedido:</strong>
+              <span className="text-[11px] text-emerald-300/90">
+                O WhatsApp da Conserta Cell está sendo aberto automaticamente com todos os dados do pedido.
+              </span>
+            </div>
+          </div>
+
           {/* PIX Box */}
           {order.paymentMethod === 'pix' && (
             <div className="bg-[#181818] p-4 rounded-xl border border-red-900/50 space-y-3 text-center">
@@ -122,15 +188,20 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
           </div>
 
           {/* WhatsApp Link */}
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white py-3 rounded-xl font-bold text-xs transition-all shadow-md"
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span>Enviar Comprovante no WhatsApp</span>
-          </a>
+          <div className="space-y-1.5 pt-1">
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2.5 bg-[#25D366] hover:bg-[#20ba59] active:scale-98 text-white py-3.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-950/50 cursor-pointer"
+            >
+              <MessageCircle className="w-5 h-5 shrink-0" />
+              <span>Enviar Pedido no WhatsApp da Loja</span>
+            </a>
+            <p className="text-[10px] text-center text-neutral-400">
+              Abre o WhatsApp da Conserta Cell com o resumo completo dos itens, dados de entrega e comprovante já preenchidos.
+            </p>
+          </div>
 
           {/* Track order */}
           <button
