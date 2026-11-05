@@ -92,8 +92,8 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
               )}
 
               <div className="text-[11px] text-neutral-400 text-left pt-1 space-y-0.5">
-                <p>• Chave Pix: <strong>(43) 99837-0350</strong></p>
-                <p>• Favorecido: <strong>Conserta Cell Arapongas</strong></p>
+                <p>• Chave Pix: <strong>{settings?.payment.pixKey || '(43) 99837-0350'}</strong></p>
+                <p>• Favorecido: <strong>{settings?.payment.pixRecipientName || settings?.companyName || 'Conserta Cell Arapongas'}</strong></p>
               </div>
             </div>
           )}

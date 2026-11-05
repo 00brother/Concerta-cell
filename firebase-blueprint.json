@@ -1,0 +1,93 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Produto disponível no catálogo da Conserta Cell",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "promotionalPrice": { "type": "number" },
+        "stock": { "type": "number" },
+        "images": { "type": "array" },
+        "active": { "type": "boolean" },
+        "featured": { "type": "boolean" },
+        "weightKg": { "type": "number" },
+        "widthCm": { "type": "number" },
+        "heightCm": { "type": "number" },
+        "lengthCm": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "price", "stock", "category"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Pedido de compra realizado na Conserta Cell",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "customer": { "type": "object" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "shippingCost": { "type": "number" },
+        "shippingSelection": { "type": "object" },
+        "total": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["orderNumber", "customer", "items", "total", "status"]
+    },
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Configurações comerciais e de frete da Conserta Cell",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "city": { "type": "string" },
+        "localDelivery": { "type": "object" },
+        "correios": { "type": "object" },
+        "payment": { "type": "object" }
+      }
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Log de auditoria e segurança da loja",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "ip": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Coleção de produtos do catálogo"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Coleção de pedidos dos clientes"
+    },
+    "/settings/{settingId}": {
+      "schema": "StoreSettings",
+      "description": "Configurações gerais da loja"
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Histórico de logs de auditoria"
+    }
+  }
+}

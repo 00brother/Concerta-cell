@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Products Collection: Public read, management write
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Orders Collection: Public create (buyers) & lookup by ID, status updates
+    match /orders/{orderId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if false;
+    }
+
+    // Store Settings: Public read, store admin write
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Audit Logs: System and admin logging
+    match /audit_logs/{logId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // Fallback Deny Rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

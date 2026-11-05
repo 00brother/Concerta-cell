@@ -519,15 +519,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               >
                 {loginLoading ? 'Verificando credenciais...' : 'Entrar no Painel'}
               </button>
-
-              <div className="text-center pt-2">
-                <p className="text-[11px] text-neutral-400">
-                  Credenciais padrão para demonstração: <span className="font-mono text-white bg-neutral-800 px-1.5 py-0.5 rounded">admin</span> / <span className="font-mono text-white bg-neutral-800 px-1.5 py-0.5 rounded">admin123</span>
-                </p>
-                <p className="text-[10px] text-neutral-500 mt-1">
-                  (Você pode alterar seu usuário e senha com segurança na aba &ldquo;Segurança&rdquo;)
-                </p>
-              </div>
             </form>
           </div>
         ) : (
