@@ -48,6 +48,12 @@ const DEFAULT_SETTINGS: StoreSettings = {
   },
   aboutText:
     'A Conserta Cell está em Arapongas para ajudar você com assistência técnica e acessórios para celulares. Nosso objetivo é oferecer um atendimento claro, prático e atencioso em cada contato.',
+  pickup: {
+    enabled: true,
+    estimatedTime: 'Pronto em até 2 horas úteis',
+    instructions: 'Retirada gratuita na loja física em Arapongas/PR.',
+    address: 'Arapongas, PR',
+  },
   localDelivery: {
     enabled: true,
     fee: 10.0,
@@ -277,13 +283,55 @@ class DatabaseManager {
   }
 
   // Orders
+  // Check and auto-expire pending orders older than 30 minutes
+  private checkAndExpireOrders(): void {
+    const now = Date.now();
+    let hasChanges = false;
+
+    for (const order of this.data.orders) {
+      if (order.status === 'pending') {
+        const createdAtMs = new Date(order.createdAt).getTime();
+        const expiresAtMs = order.expiresAt ? new Date(order.expiresAt).getTime() : createdAtMs + 30 * 60 * 1000;
+
+        if (now > expiresAtMs) {
+          order.status = 'cancelled';
+          order.updatedAt = new Date().toISOString();
+          order.statusHistory.push({
+            status: 'cancelled',
+            timestamp: order.updatedAt,
+            note: 'Pedido cancelado automaticamente após 30 minutos sem confirmação de pagamento.',
+          });
+
+          // Restore product stock
+          for (const item of order.items) {
+            const prod = this.data.products.find((p) => p.id === item.productId);
+            if (prod) {
+              prod.stock += item.quantity;
+              prod.updatedAt = order.updatedAt;
+            }
+          }
+
+          this.logAction('ORDER_EXPIRED', `Pedido ${order.orderNumber} expirou (> 30 min) e estoque foi restaurado.`);
+          hasChanges = true;
+        }
+      }
+    }
+
+    if (hasChanges) {
+      this.save();
+    }
+  }
+
+  // Orders
   public getOrders(): Order[] {
+    this.checkAndExpireOrders();
     return [...this.data.orders].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
 
   public getOrderById(id: string): Order | undefined {
+    this.checkAndExpireOrders();
     return this.data.orders.find((o) => o.id === id || o.orderNumber === id);
   }
 
@@ -291,17 +339,19 @@ class DatabaseManager {
     const count = this.data.orders.length + 1001;
     const orderNumber = `CC-${count}`;
     const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     const newOrder: Order = {
       ...orderData,
       id: crypto.randomUUID(),
       orderNumber,
+      expiresAt: orderData.expiresAt || expiresAt,
       createdAt: now,
       updatedAt: now,
       statusHistory: [
         {
           status: orderData.status,
           timestamp: now,
-          note: 'Pedido registrado com sucesso no sistema.',
+          note: 'Pedido registrado com sucesso no sistema. Aguardando pagamento em até 30 minutos.',
         },
       ],
     };

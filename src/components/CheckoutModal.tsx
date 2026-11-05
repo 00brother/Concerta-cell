@@ -72,7 +72,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [cardExp, setCardExp] = useState('');
   const [cardCvv, setCardCvv] = useState('');
 
-  // Auto-fetch address & calculate Correios shipping when 8-digit CEP is typed
+  // Auto-fetch address & calculate shipping when 8-digit CEP is typed or on modal open
+  useEffect(() => {
+    const cleanCep = formData.cep.replace(/\D/g, '') || '86700000';
+    fetchShippingOptions(cleanCep);
+  }, []);
+
   useEffect(() => {
     const cleanCep = formData.cep.replace(/\D/g, '');
     if (cleanCep.length === 8) {
@@ -164,7 +169,18 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setCardExp(val);
   };
 
-  const shippingCost = shippingOption ? shippingOption.price : 0;
+  const detectBrand = (num: string): string => {
+    const clean = num.replace(/\D/g, '');
+    if (/^4/.test(clean)) return 'Visa';
+    if (/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[01]|2720)/.test(clean)) return 'Mastercard';
+    if (/^(4011|438935|504175|451416|636297|5067|4576|6504|6509|5090)/.test(clean)) return 'Elo';
+    if (/^(606282|3841)/.test(clean)) return 'Hipercard';
+    if (/^3[47]/.test(clean)) return 'Amex';
+    return '';
+  };
+
+  const detectedBrand = detectBrand(cardNumber);
+  const shippingCost = shippingOption?.price || 0;
   const grandTotal = subtotal + shippingCost;
 
   // Installment calculations: up to 3x sem juros, up to 21x with monthly rate
@@ -221,34 +237,44 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       return;
     }
 
-    // 5. Validação de CEP
-    const cleanCep = formData.cep.replace(/\D/g, '');
-    if (cleanCep.length !== 8 || /^(\d)\1{7}$/.test(cleanCep)) {
-      setErrorMsg('Informe um CEP válido com 8 dígitos numéricos.');
-      return;
-    }
-
-    // 6. Validação de Endereço Completo
-    if (!formData.street.trim() || formData.street.trim().length < 3) {
-      setErrorMsg('Informe o nome da sua rua ou avenida.');
-      return;
-    }
-    if (!formData.number.trim()) {
-      setErrorMsg('Informe o número do endereço (ou digite S/N se não houver número).');
-      return;
-    }
-    if (!formData.neighborhood.trim() || formData.neighborhood.trim().length < 2) {
-      setErrorMsg('Informe o bairro de entrega.');
-      return;
-    }
-    if (!formData.city.trim() || !formData.state.trim()) {
-      setErrorMsg('Cidade e Estado de entrega incompletos.');
-      return;
-    }
-
     if (!shippingOption) {
-      setErrorMsg('Aguarde o cálculo e selecione uma modalidade de envio.');
+      setErrorMsg('Selecione uma modalidade de envio ou retirada.');
       return;
+    }
+
+    const isPickup = shippingOption?.id === 'pickup';
+
+    if (isPickup) {
+      // If customer chooses to pick up at the shop in Arapongas
+      if (!formData.street.trim()) formData.street = 'Retirada no Balcão Conserta Cell';
+      if (!formData.number.trim()) formData.number = 'Loja Física';
+      if (!formData.neighborhood.trim()) formData.neighborhood = 'Centro';
+      if (!formData.cep.trim()) formData.cep = '86700-000';
+    } else {
+      // 5. Validação de CEP para entrega
+      const cleanCep = formData.cep.replace(/\D/g, '');
+      if (cleanCep.length !== 8 || /^(\d)\1{7}$/.test(cleanCep)) {
+        setErrorMsg('Informe um CEP válido com 8 dígitos numéricos para cálculo e entrega.');
+        return;
+      }
+
+      // 6. Validação de Endereço Completo para entrega
+      if (!formData.street.trim() || formData.street.trim().length < 3) {
+        setErrorMsg('Informe o nome da sua rua ou avenida.');
+        return;
+      }
+      if (!formData.number.trim()) {
+        setErrorMsg('Informe o número do endereço (ou digite S/N se não houver número).');
+        return;
+      }
+      if (!formData.neighborhood.trim() || formData.neighborhood.trim().length < 2) {
+        setErrorMsg('Informe o bairro de entrega.');
+        return;
+      }
+      if (!formData.city.trim() || !formData.state.trim()) {
+        setErrorMsg('Cidade e Estado de entrega incompletos.');
+        return;
+      }
     }
 
     // 7. Validação de Cartão de Crédito (se selecionado)
@@ -290,10 +316,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       if (paymentMethod === 'credit_card') {
         const cleanCard = cardNumber.replace(/\D/g, '');
         cardLast4 = cleanCard.substring(cleanCard.length - 4);
-        if (cleanCard.startsWith('4')) cardBrand = 'visa';
-        else if (cleanCard.startsWith('5')) cardBrand = 'master';
-        else if (cleanCard.startsWith('3')) cardBrand = 'amex';
-        else cardBrand = 'elo';
+        cardBrand = detectedBrand ? detectedBrand.toLowerCase() : 'master';
 
         // Generate secure client-side token reference (never sending raw card to database)
         cardToken = `tok_${crypto.randomUUID().replace(/-/g, '')}`;
@@ -549,8 +572,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           <p className="text-emerald-400 text-[11px] font-medium">Prazo: {opt.estimatedDays}</p>
                         </div>
                       </div>
-                      <span className="font-mono font-bold text-red-400 text-sm">
-                        R$ {opt.price.toFixed(2).replace('.', ',')}
+                      <span className={`font-mono font-bold text-sm ${opt.price === 0 ? 'text-emerald-400 font-extrabold' : 'text-red-400'}`}>
+                        {opt.price === 0 ? 'GRÁTIS' : `R$ ${opt.price.toFixed(2).replace('.', ',')}`}
                       </span>
                     </label>
                   ))}
@@ -595,25 +618,35 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               {paymentMethod === 'credit_card' && (
                 <div className="p-3.5 bg-[#181818] rounded-xl border border-[#2a2a2a] space-y-3">
                   <div>
-                    <label className="block text-xs text-neutral-300 mb-1">
-                      Parcelas:
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs text-neutral-300 font-medium">Parcelamento no Cartão:</label>
+                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/70 border border-emerald-800/60 px-2 py-0.5 rounded">
+                        Até 3x Sem Juros · Até 21x
+                      </span>
+                    </div>
                     <select
                       value={installmentsCount}
                       onChange={(e) => setInstallmentsCount(parseInt(e.target.value, 10))}
-                      className="w-full bg-[#111111] border border-[#333333] text-white text-xs p-2 rounded-lg focus:border-red-500"
+                      className="w-full bg-[#111111] border border-[#333333] text-white text-xs p-2.5 rounded-lg focus:border-red-500 cursor-pointer"
                     >
                       {installmentOptions.map((opt) => (
                         <option key={opt.count} value={opt.count}>
                           {opt.count}x de R$ {opt.installmentValue.toFixed(2).replace('.', ',')}{' '}
-                          {opt.isFree ? '(Sem juros)' : `(Total R$ ${opt.totalAmount.toFixed(2).replace('.', ',')})`}
+                          {opt.isFree ? '— SEM JUROS' : `— Total R$ ${opt.totalAmount.toFixed(2).replace('.', ',')} (com juros)`}
                         </option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs text-neutral-300 mb-1">Número do Cartão *</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs text-neutral-300 font-medium">Número do Cartão *</label>
+                      {detectedBrand && (
+                        <span className="text-[10px] font-bold text-red-400 bg-red-950/80 border border-red-800/60 px-2 py-0.5 rounded uppercase">
+                          {detectedBrand}
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="text"
                       required={paymentMethod === 'credit_card'}
@@ -621,7 +654,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       onChange={handleCardNumberChange}
                       placeholder="0000 0000 0000 0000"
                       maxLength={19}
-                      className="w-full bg-[#111111] border border-[#333333] text-white text-xs p-2 rounded-lg font-mono"
+                      className="w-full bg-[#111111] border border-[#333333] text-white text-xs p-2.5 rounded-lg font-mono focus:border-red-500"
                     />
                   </div>
 
@@ -687,15 +720,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           /* Review Step */
           <div className="p-4 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
             <div className="bg-[#181818] p-3.5 rounded-xl border border-[#222222] text-xs space-y-1.5">
-              <h4 className="font-bold text-white text-xs">Dados de Entrega</h4>
+              <h4 className="font-bold text-white text-xs">
+                {shippingOption?.id === 'pickup' ? 'Dados da Retirada' : 'Dados de Entrega'}
+              </h4>
               <p className="text-neutral-300">
-                <strong>Destinatário:</strong> {formData.fullName} ({formData.phone})
+                <strong>Cliente:</strong> {formData.fullName} ({formData.phone})
               </p>
+              {shippingOption?.id === 'pickup' ? (
+                <p className="text-emerald-400 font-semibold">
+                  <strong>Local:</strong> Balcão da Loja Física Conserta Cell — Arapongas/PR (Frete Grátis)
+                </p>
+              ) : (
+                <p className="text-neutral-300">
+                  <strong>Endereço:</strong> {formData.street}, nº {formData.number} - {formData.neighborhood}, {formData.city}/{formData.state} - CEP: {formData.cep}
+                </p>
+              )}
               <p className="text-neutral-300">
-                <strong>Endereço:</strong> {formData.street}, nº {formData.number} - {formData.neighborhood}, {formData.city}/{formData.state} - CEP: {formData.cep}
-              </p>
-              <p className="text-neutral-300">
-                <strong>Envio:</strong> {shippingOption?.title} ({shippingOption?.estimatedDays})
+                <strong>Modalidade:</strong> {shippingOption?.title} ({shippingOption?.estimatedDays})
               </p>
             </div>
 

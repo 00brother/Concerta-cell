@@ -1588,10 +1588,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <p className="font-bold text-white">Dados do Comprador</p>
                 <p className="text-neutral-300">Nome: {selectedOrder.customer.fullName} · CPF: {selectedOrder.customer.cpf}</p>
                 <p className="text-neutral-300">Telefone/WhatsApp: {selectedOrder.customer.phone} · E-mail: {selectedOrder.customer.email}</p>
-                <p className="text-neutral-300">
-                  Endereço: {selectedOrder.customer.street}, nº {selectedOrder.customer.number}{' '}
-                  {selectedOrder.customer.complement ? `(${selectedOrder.customer.complement})` : ''} - {selectedOrder.customer.neighborhood}, {selectedOrder.customer.city}/{selectedOrder.customer.state} - CEP: {selectedOrder.customer.cep}
-                </p>
+                {selectedOrder.shippingSelection?.id === 'pickup' ? (
+                  <p className="text-emerald-400 font-semibold pt-1">
+                    Modalidade: 🏬 RETIRADA NO BALCÃO (Loja Física Arapongas/PR) — Frete Grátis
+                  </p>
+                ) : (
+                  <p className="text-neutral-300">
+                    Endereço: {selectedOrder.customer.street}, nº {selectedOrder.customer.number}{' '}
+                    {selectedOrder.customer.complement ? `(${selectedOrder.customer.complement})` : ''} - {selectedOrder.customer.neighborhood}, {selectedOrder.customer.city}/{selectedOrder.customer.state} - CEP: {selectedOrder.customer.cep}
+                  </p>
+                )}
               </div>
 
               {/* Items */}

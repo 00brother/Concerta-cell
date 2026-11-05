@@ -251,8 +251,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                             <p className="text-[10px] text-neutral-400">Prazo: {opt.estimatedDays}</p>
                           </div>
                         </div>
-                        <span className="font-mono font-bold text-red-400">
-                          R$ {opt.price.toFixed(2).replace('.', ',')}
+                        <span className={`font-mono font-bold ${opt.price === 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {opt.price === 0 ? 'GRÁTIS' : `R$ ${opt.price.toFixed(2).replace('.', ',')}`}
                         </span>
                       </label>
                     ))}

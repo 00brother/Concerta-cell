@@ -40,6 +40,8 @@
         "total": { "type": "number" },
         "paymentMethod": { "type": "string" },
         "status": { "type": "string" },
+        "expiresAt": { "type": "string" },
+        "paidAt": { "type": "string" },
         "createdAt": { "type": "string" },
         "updatedAt": { "type": "string" }
       },

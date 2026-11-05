@@ -20,10 +20,10 @@ export const Benefits: React.FC<BenefitsProps> = ({ settings }) => {
             </div>
             <div>
               <h3 className="text-sm font-bold text-white mb-1">
-                Entrega Local em Arapongas
+                Entrega ou Retirada em Arapongas
               </h3>
               <p className="text-neutral-400 text-xs leading-relaxed">
-                Entrega rápida no seu endereço por apenas R$ {localFee.toFixed(2).replace('.', ',')}.
+                Retire grátis na loja física ou receba com agilidade por R$ {localFee.toFixed(2).replace('.', ',')}.
               </p>
             </div>
           </div>

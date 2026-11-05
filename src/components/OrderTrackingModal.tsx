@@ -135,11 +135,48 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 </div>
               </div>
 
+              {/* Expiration check for pending orders */}
+              {order.status === 'pending' && (
+                (() => {
+                  const createdAtMs = new Date(order.createdAt).getTime();
+                  const expiresAtMs = order.expiresAt
+                    ? new Date(order.expiresAt).getTime()
+                    : createdAtMs + 30 * 60 * 1000;
+                  const isExpired = Date.now() > expiresAtMs;
+                  const diffMinutes = Math.max(0, Math.ceil((expiresAtMs - Date.now()) / (60 * 1000)));
+
+                  if (isExpired) {
+                    return (
+                      <div className="p-4 bg-red-950/60 border border-red-800 rounded-xl text-center space-y-1">
+                        <p className="font-bold text-red-400 text-sm">Prazo de Pagamento Expirado</p>
+                        <p className="text-xs text-neutral-300">
+                          O prazo de 30 minutos para pagamento deste pedido encerrou. O pedido foi removido dos pagamentos pendentes e cancelado.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="p-3 bg-amber-950/50 border border-amber-700/60 rounded-xl flex items-center justify-between text-xs text-amber-200">
+                      <span className="flex items-center gap-1.5 font-semibold">
+                        <Clock className="w-4 h-4 text-amber-400" />
+                        Aguardando confirmação do PIX/Pagamento
+                      </span>
+                      <span className="font-mono font-bold text-amber-300">
+                        Expira em ~{diffMinutes} min
+                      </span>
+                    </div>
+                  );
+                })()
+              )}
+
               {/* Status Timeline */}
               {order.status === 'cancelled' ? (
                 <div className="p-4 bg-red-950/40 border border-red-800 rounded-xl text-center space-y-1">
                   <p className="font-bold text-red-400 text-sm">Pedido Cancelado</p>
-                  <p className="text-xs text-neutral-300">Este pedido foi cancelado pelo cliente ou pelo lojista.</p>
+                  <p className="text-xs text-neutral-300">
+                    Este pedido foi cancelado (expiração do prazo de 30 minutos de pagamento ou solicitação do cliente).
+                  </p>
                 </div>
               ) : (
                 <div className="p-4 bg-[#181818] rounded-xl border border-[#262626] space-y-3">

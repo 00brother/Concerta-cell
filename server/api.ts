@@ -2,6 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import crypto from 'node:crypto';
 import { db } from './db.ts';
 import type { ShippingOption, OrderStatus, Product } from '../src/types/index.ts';
+import { generatePixBrCode, generatePixQrCodeDataUrl } from '../src/utils/pix.ts';
 
 export const apiRouter = Router();
 
@@ -179,6 +180,16 @@ apiRouter.post('/shipping/calculate', (req: Request, res: Response) => {
 
   const settings = db.getSettings();
   const options: ShippingOption[] = [];
+
+  // 1. Opção permanente: Retirar no Local (Balcão Conserta Cell - Arapongas/PR)
+  options.push({
+    id: 'pickup',
+    title: 'Retirar no Local — Balcão Conserta Cell',
+    price: 0,
+    estimatedDays: 'Pronto em até 2 horas úteis',
+    description: 'Retirada gratuita na loja física em Arapongas/PR. Avisamos assim que o pedido for separado.',
+    isLocal: true,
+  });
 
   // Arapongas range: 86700-000 to 86719-999
   const cepNum = parseInt(cleanCep, 10);
@@ -396,7 +407,16 @@ apiRouter.post('/orders', async (req: Request, res: Response) => {
 
   let selectedShipping: ShippingOption;
 
-  if (isArapongas) {
+  if (shippingOptionId === 'pickup') {
+    selectedShipping = {
+      id: 'pickup',
+      title: 'Retirar no Local — Balcão Conserta Cell',
+      price: 0,
+      estimatedDays: 'Pronto em até 2 horas úteis',
+      description: 'Retirada gratuita na loja física em Arapongas/PR.',
+      isLocal: true,
+    };
+  } else if (isArapongas) {
     selectedShipping = {
       id: 'local',
       title: 'Entrega Local — Arapongas/PR',
@@ -516,12 +536,23 @@ apiRouter.post('/orders', async (req: Request, res: Response) => {
     }
   }
 
-  // Fallback to official PIX code if Mercado Pago is not configured or in setup
+  // Generate official standard Central Bank PIX code with valid CRC16 & QR code
   if (paymentMethod === 'pix' && !pixCode) {
     const pixKey = settings.payment.pixKey || '43998370350';
-    const cleanKey = pixKey.replace(/\D/g, '');
-    const txId = crypto.randomBytes(6).toString('hex').toUpperCase();
-    pixCode = `00020126360014BR.GOV.BCB.PIX0114+55${cleanKey}520400005303986540${total.toFixed(2).length < 10 ? '0' : ''}${total.toFixed(2)}5802BR5913CONSERTA CELL6009ARAPONGAS62070503***6304${txId.substring(0, 4)}`;
+    pixCode = generatePixBrCode({
+      key: pixKey,
+      recipientName: settings.payment.pixRecipientName || settings.companyName || 'CONSERTA CELL',
+      city: 'ARAPONGAS',
+      amount: total,
+      txId: `CC${Date.now().toString().slice(-6)}`,
+      description: 'Pedido Conserta Cell',
+    });
+
+    try {
+      pixQrCodeBase64 = await generatePixQrCodeDataUrl(pixCode);
+    } catch {
+      // Ignored
+    }
   }
 
   // Credit Card token processing

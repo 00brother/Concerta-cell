@@ -202,6 +202,62 @@ export const cloudDb = {
   },
 
   // 4. ORDERS
+  async checkOrderExpiration(order: Order): Promise<Order> {
+    if (order.status !== 'pending') return order;
+    const createdAtMs = new Date(order.createdAt).getTime();
+    const expiresAtMs = order.expiresAt
+      ? new Date(order.expiresAt).getTime()
+      : createdAtMs + 30 * 60 * 1000;
+
+    if (Date.now() > expiresAtMs) {
+      console.log(`[Firestore] Pedido ${order.orderNumber} expirou (> 30 min). Cancelando e restaurando estoque.`);
+      const now = new Date().toISOString();
+      const updatedHistory = [
+        ...(order.statusHistory || []),
+        {
+          status: 'cancelled' as OrderStatus,
+          timestamp: now,
+          note: 'Pedido cancelado automaticamente após 30 minutos sem confirmação de pagamento.',
+        },
+      ];
+
+      const updates = {
+        status: 'cancelled' as OrderStatus,
+        updatedAt: now,
+        statusHistory: updatedHistory,
+      };
+
+      try {
+        await updateDoc(doc(firestore, 'orders', order.id), sanitizeForFirestore(updates));
+        // Restore stock
+        for (const it of order.items || []) {
+          try {
+            const prodRef = doc(firestore, 'products', it.productId);
+            const pSnap = await getDoc(prodRef);
+            if (pSnap.exists()) {
+              const currentStock = Number(pSnap.data().stock) || 0;
+              await updateDoc(prodRef, {
+                stock: currentStock + it.quantity,
+                updatedAt: now,
+              });
+            }
+          } catch (stkErr) {
+            console.warn('[Firestore] Falha ao restaurar estoque de produto cancelado:', stkErr);
+          }
+        }
+        await this.addLog('ORDER_EXPIRED', `Pedido ${order.orderNumber} cancelado por expiração de tempo (30 minutos).`);
+      } catch (e) {
+        console.error('[Firestore] Erro ao persistir cancelamento por expiração:', e);
+      }
+
+      return {
+        ...order,
+        ...updates,
+      };
+    }
+    return order;
+  },
+
   async createOrder(order: Order): Promise<Order> {
     const sanitized = sanitizeForFirestore(order);
     await setDoc(doc(firestore, 'orders', order.id), sanitized);
@@ -214,14 +270,16 @@ export const cloudDb = {
       // Direct ID
       const direct = await getDoc(doc(firestore, 'orders', idOrNumber));
       if (direct.exists()) {
-        return direct.data() as Order;
+        const orderData = { id: direct.id, ...direct.data() } as Order;
+        return await this.checkOrderExpiration(orderData);
       }
 
       // Query by orderNumber (e.g. CC-1001)
       const q = query(collection(firestore, 'orders'), where('orderNumber', '==', idOrNumber));
       const snap = await getDocs(q);
       if (!snap.empty) {
-        return snap.docs[0].data() as Order;
+        const orderData = { id: snap.docs[0].id, ...snap.docs[0].data() } as Order;
+        return await this.checkOrderExpiration(orderData);
       }
       return null;
     } catch (err) {
@@ -239,9 +297,15 @@ export const cloudDb = {
 
       const snap = await getDocs(q);
       const list: Order[] = [];
-      snap.forEach((d) => {
-        list.push(d.data() as Order);
-      });
+      for (const d of snap.docs) {
+        const orderData = { id: d.id, ...d.data() } as Order;
+        const verified = await this.checkOrderExpiration(orderData);
+        // If caller requested pending orders and it was expired, omit it from pending
+        if (status === 'pending' && verified.status !== 'pending') {
+          continue;
+        }
+        list.push(verified);
+      }
 
       return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (err) {
@@ -274,6 +338,9 @@ export const cloudDb = {
       updatedAt: now,
       statusHistory: updatedHistory,
     };
+    if (status === 'approved') {
+      updates.paidAt = now;
+    }
     if (trackingCode !== undefined && trackingCode !== null && trackingCode !== '') {
       updates.trackingCode = trackingCode;
     }

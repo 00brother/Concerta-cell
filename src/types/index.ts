@@ -32,6 +32,12 @@ export interface StoreSettings {
     sunday: string;
   };
   aboutText: string;
+  pickup?: {
+    enabled: boolean;
+    estimatedTime: string;
+    instructions: string;
+    address: string;
+  };
   localDelivery: {
     enabled: boolean;
     fee: number;
@@ -81,7 +87,7 @@ export interface CustomerInfo {
   state: string;
 }
 
-export type ShippingType = 'local' | 'correios_pac' | 'correios_sedex';
+export type ShippingType = 'local' | 'pickup' | 'correios_pac' | 'correios_sedex';
 
 export interface ShippingOption {
   id: ShippingType;
@@ -140,6 +146,8 @@ export interface Order {
   cardLast4?: string;
   mpPaymentId?: string;
   trackingCode?: string;
+  expiresAt?: string;
+  paidAt?: string;
   createdAt: string;
   updatedAt: string;
 }

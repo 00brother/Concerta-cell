@@ -13,6 +13,7 @@ import {
   validateEmail,
   validatePhone,
 } from '../utils/validation.ts';
+import { generatePixBrCode, generatePixQrCodeDataUrl } from '../utils/pix.ts';
 
 const API_BASE = '/api';
 
@@ -32,6 +33,12 @@ const DEFAULT_CLIENT_SETTINGS: StoreSettings = {
   },
   aboutText:
     'A Conserta Cell está em Arapongas para ajudar você com assistência técnica e acessórios para celulares. Nosso objetivo é oferecer um atendimento claro, prático e atencioso em cada contato.',
+  pickup: {
+    enabled: true,
+    estimatedTime: 'Pronto em até 2 horas úteis',
+    instructions: 'Retirada gratuita na loja física em Arapongas/PR.',
+    address: 'Arapongas, PR',
+  },
   localDelivery: {
     enabled: true,
     fee: 10.0,
@@ -184,10 +191,20 @@ export const api = {
     const settings = await this.getSettings();
     const options: ShippingOption[] = [];
 
+    // 1. Sempre disponibiliza a opção de Retirar no Local (Grátis - Arapongas/PR)
+    options.push({
+      id: 'pickup',
+      title: 'Retirar no Local — Balcão Conserta Cell',
+      price: 0,
+      estimatedDays: 'Pronto em até 2 horas úteis',
+      description: 'Retirada gratuita na loja física em Arapongas/PR. Avisaremos assim que estiver separado.',
+      isLocal: true,
+    });
+
     const cepNum = parseInt(cleanCep, 10);
     const startNum = parseInt(settings.localDelivery.cepStart.replace(/\D/g, ''), 10);
     const endNum = parseInt(settings.localDelivery.cepEnd.replace(/\D/g, ''), 10);
-    const isArapongas = cepNum >= startNum && cepNum <= endNum;
+    const isArapongas = cleanCep.length === 8 && cepNum >= startNum && cepNum <= endNum;
 
     if (isArapongas) {
       if (settings.localDelivery.enabled) {
@@ -201,7 +218,7 @@ export const api = {
         });
       }
     } else {
-      if (settings.correios.enabled) {
+      if (settings.correios.enabled && cleanCep.length === 8) {
         let totalWeight = 0;
         let totalVolumeCm3 = 0;
 
@@ -259,7 +276,7 @@ export const api = {
       isLocal: isArapongas,
       options,
       note: isArapongas
-        ? 'Endereço em Arapongas/PR com entrega local.'
+        ? 'Endereço em Arapongas/PR com entrega local ou retirada na loja.'
         : 'Cálculo de frete Correios baseado em peso e dimensões reais.',
     };
   },
@@ -289,6 +306,8 @@ export const api = {
     const count = existingOrders.length + 1001;
     const orderNumber = `CC-${count}`;
     const now = new Date().toISOString();
+    // Expiration: Exactly 30 minutes from creation
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
     const items = payload.items || [];
     let subtotal = 0;
@@ -308,21 +327,50 @@ export const api = {
       };
     });
 
-    const shippingOption = payload.shippingSelection || {
-      id: 'local',
-      title: 'Entrega Local',
-      price: 10,
-      estimatedDays: '1 dia útil',
-      isLocal: true,
-      description: 'Entrega local em Arapongas',
-    };
+    const isPickup = payload.shippingSelection?.id === 'pickup' || payload.shippingOptionId === 'pickup';
+    const shippingOption: ShippingOption = isPickup
+      ? {
+          id: 'pickup',
+          title: 'Retirar no Local — Balcão Conserta Cell',
+          price: 0,
+          estimatedDays: 'Pronto em até 2 horas úteis',
+          isLocal: true,
+          description: 'Retirada gratuita na loja física em Arapongas/PR.',
+        }
+      : payload.shippingSelection || {
+          id: 'local',
+          title: 'Entrega Local',
+          price: 10,
+          estimatedDays: '1 dia útil',
+          isLocal: true,
+          description: 'Entrega local em Arapongas',
+        };
 
     const total = Number((subtotal + shippingOption.price).toFixed(2));
     const settings = await this.getSettings();
-    const pixKey = settings.payment.pixKey || '43998370350';
-    const cleanKey = pixKey.replace(/\D/g, '');
 
-    const pixCode = `00020126360014BR.GOV.BCB.PIX0114+55${cleanKey}520400005303986540${total.toFixed(2).length < 10 ? '0' : ''}${total.toFixed(2)}5802BR5913CONSERTA CELL6009ARAPONGAS62070503***6304CC${orderNumber.slice(-4)}`;
+    // Generate real Central Bank of Brazil compliant PIX BR Code & high-res QR code
+    let pixCode: string | undefined = undefined;
+    let pixQrCodeBase64: string | undefined = undefined;
+
+    if (payload.paymentMethod === 'pix' || !payload.paymentMethod) {
+      const pixKey = settings.payment.pixKey || '43998370350';
+      const cleanKey = pixKey.trim();
+      pixCode = generatePixBrCode({
+        key: cleanKey,
+        recipientName: settings.payment.pixRecipientName || settings.companyName || 'CONSERTA CELL',
+        city: 'ARAPONGAS',
+        amount: total,
+        txId: `CC${orderNumber.replace(/\D/g, '')}`,
+        description: `Pedido ${orderNumber}`,
+      });
+
+      try {
+        pixQrCodeBase64 = await generatePixQrCodeDataUrl(pixCode);
+      } catch (err) {
+        console.warn('[Pix] Falha ao gerar QR Code local:', err);
+      }
+    }
 
     const newOrder: Order = {
       id: `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -340,12 +388,14 @@ export const api = {
         {
           status: 'pending',
           timestamp: now,
-          note: 'Pedido registrado com sucesso no sistema.',
+          note: 'Pedido registrado com sucesso no sistema. Aguardando pagamento em até 30 minutos.',
         },
       ],
-      pixCode: payload.paymentMethod === 'pix' ? pixCode : undefined,
+      pixCode,
+      pixQrCodeBase64,
       cardBrand: payload.cardBrand,
       cardLast4: payload.cardLast4,
+      expiresAt,
       createdAt: now,
       updatedAt: now,
     };

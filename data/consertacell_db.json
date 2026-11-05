@@ -42,7 +42,26 @@
       "pixRecipientName": "Conserta Cell Arapongas"
     }
   },
-  "products": [],
+  "products": [
+    {
+      "id": "prod_teste_050",
+      "name": "Película de Teste (Simulação 50 Centavos)",
+      "slug": "pelicula-de-teste-simulacao-50-centavos",
+      "description": "Produto para você testar a simulação de pagamento de R$ 0,50 no PIX ou Cartão e validar o envio no WhatsApp.",
+      "category": "Capinhas & Películas",
+      "price": 0.5,
+      "stock": 100,
+      "images": ["/logo.png"],
+      "active": true,
+      "featured": true,
+      "weightKg": 0.05,
+      "widthCm": 10,
+      "heightCm": 1,
+      "lengthCm": 15,
+      "createdAt": "2026-11-05T14:00:00.000Z",
+      "updatedAt": "2026-11-05T14:00:00.000Z"
+    }
+  ],
   "orders": [],
   "auditLogs": [
     {
