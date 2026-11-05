@@ -101,48 +101,122 @@ export const cloudDb = {
 
   async saveProduct(productData: any, id?: string): Promise<Product> {
     const now = new Date().toISOString();
-    const prodId = id || `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const prodId = id || productData.id || `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-    const slug = (productData.name || 'produto')
+    // If updating an existing product, retrieve existing fields to prevent overwriting prices or descriptions
+    let existingProd: Product | null = null;
+    if (id || productData.id) {
+      try {
+        existingProd = await this.getProduct(id || productData.id);
+      } catch {
+        existingProd = null;
+      }
+    }
+
+    const name = productData.name !== undefined ? productData.name : (existingProd?.name || 'Produto');
+    const slug = (name || 'produto')
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
 
-    const hasPromo = productData.promotionalPrice !== undefined && 
-                     productData.promotionalPrice !== null && 
-                     productData.promotionalPrice !== '' && 
-                     !isNaN(Number(productData.promotionalPrice)) && 
-                     Number(productData.promotionalPrice) > 0;
+    const price = productData.price !== undefined
+      ? Number(productData.price)
+      : (existingProd?.price !== undefined ? Number(existingProd.price) : 0);
+
+    const stock = productData.stock !== undefined
+      ? Number(productData.stock)
+      : (existingProd?.stock !== undefined ? Number(existingProd.stock) : 0);
+
+    const description = productData.description !== undefined
+      ? productData.description
+      : (existingProd?.description || '');
+
+    const category = productData.category !== undefined
+      ? productData.category
+      : (existingProd?.category || 'Geral');
+
+    const images = Array.isArray(productData.images) && productData.images.length > 0
+      ? productData.images
+      : (existingProd?.images && existingProd.images.length > 0 ? existingProd.images : ['./logo.png']);
+
+    const active = productData.active !== undefined
+      ? Boolean(productData.active)
+      : (existingProd?.active !== undefined ? Boolean(existingProd.active) : true);
+
+    const featured = productData.featured !== undefined
+      ? Boolean(productData.featured)
+      : (existingProd?.featured !== undefined ? Boolean(existingProd.featured) : false);
+
+    const weightKg = productData.weightKg !== undefined
+      ? Number(productData.weightKg)
+      : (existingProd?.weightKg || 0.25);
+
+    const widthCm = productData.widthCm !== undefined
+      ? Number(productData.widthCm)
+      : (existingProd?.widthCm || 15);
+
+    const heightCm = productData.heightCm !== undefined
+      ? Number(productData.heightCm)
+      : (existingProd?.heightCm || 4);
+
+    const lengthCm = productData.lengthCm !== undefined
+      ? Number(productData.lengthCm)
+      : (existingProd?.lengthCm || 20);
+
+    const promotionalPrice = productData.promotionalPrice !== undefined
+      ? (productData.promotionalPrice !== null && productData.promotionalPrice !== '' && !isNaN(Number(productData.promotionalPrice)) && Number(productData.promotionalPrice) > 0 ? Number(productData.promotionalPrice) : undefined)
+      : existingProd?.promotionalPrice;
 
     const rawProduct: Record<string, any> = {
       id: prodId,
-      name: productData.name || 'Produto',
+      name,
       slug,
-      description: productData.description || '',
-      category: productData.category || 'Geral',
-      price: Number(productData.price) || 0,
-      stock: Number(productData.stock) || 0,
-      images: Array.isArray(productData.images) && productData.images.length > 0 ? productData.images : ['./logo.png'],
-      active: productData.active !== undefined ? Boolean(productData.active) : true,
-      featured: Boolean(productData.featured),
-      weightKg: Number(productData.weightKg) || 0.25,
-      widthCm: Number(productData.widthCm) || 15,
-      heightCm: Number(productData.heightCm) || 4,
-      lengthCm: Number(productData.lengthCm) || 20,
-      createdAt: productData.createdAt || now,
+      description,
+      category,
+      price,
+      stock,
+      images,
+      active,
+      featured,
+      weightKg,
+      widthCm,
+      heightCm,
+      lengthCm,
+      createdAt: existingProd?.createdAt || productData.createdAt || now,
       updatedAt: now,
     };
 
-    if (hasPromo) {
-      rawProduct.promotionalPrice = Number(productData.promotionalPrice);
+    if (promotionalPrice !== undefined && promotionalPrice > 0) {
+      rawProduct.promotionalPrice = promotionalPrice;
     }
 
     const sanitized = sanitizeForFirestore(rawProduct);
     await setDoc(doc(firestore, 'products', prodId), sanitized, { merge: true });
     await this.addLog('PRODUCT_SAVE', `Produto "${rawProduct.name}" salvo no banco em nuvem.`);
     return sanitized as Product;
+  },
+
+  async updateProductStock(id: string, newStock: number): Promise<void> {
+    const now = new Date().toISOString();
+    const clampedStock = Math.max(0, newStock);
+    try {
+      const prodRef = doc(firestore, 'products', id);
+      await updateDoc(prodRef, {
+        stock: clampedStock,
+        updatedAt: now,
+      });
+      await this.addLog('STOCK_UPDATE', `Estoque do produto ${id} atualizado para ${clampedStock}.`);
+    } catch (err) {
+      console.warn('[Firestore] Falha no updateDoc de estoque, usando fallback seguro:', err);
+      const existing = await this.getProduct(id).catch(() => null);
+      if (existing) {
+        existing.stock = clampedStock;
+        existing.updatedAt = now;
+        await setDoc(doc(firestore, 'products', id), sanitizeForFirestore(existing), { merge: true });
+      }
+    }
   },
 
   async deleteProduct(id: string): Promise<void> {

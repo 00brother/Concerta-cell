@@ -336,6 +336,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           quantity: i.quantity,
         })),
         shippingOptionId: shippingOption?.id,
+        shippingSelection: shippingOption,
         paymentMethod,
         installmentsCount: paymentMethod === 'credit_card' ? installmentsCount : 1,
         cardToken,

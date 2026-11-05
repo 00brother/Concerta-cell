@@ -145,12 +145,46 @@ export const api = {
 
     try {
       list = await cloudDb.getProducts(isActiveOnly);
-      localCache.saveProducts(list);
+      if (list.length > 0) {
+        localCache.saveProducts(list);
+      }
     } catch (err) {
       console.warn('[API] Falha de conexão com a nuvem, carregando cache local:', err);
+    }
+
+    if (list.length === 0) {
       list = localCache.getProducts();
       if (isActiveOnly) {
         list = list.filter((p) => p.active);
+      }
+    }
+
+    // Fallback: If still empty, fetch from /api/products (Express server catalog)
+    if (list.length === 0) {
+      try {
+        const res = await fetch('/api/products');
+        if (res.ok) {
+          const apiProducts = await res.json();
+          if (Array.isArray(apiProducts) && apiProducts.length > 0) {
+            list = isActiveOnly ? apiProducts.filter((p: any) => p.active) : apiProducts;
+            localCache.saveProducts(list);
+            for (const p of apiProducts) {
+              cloudDb.saveProduct(p, p.id).catch(() => {});
+            }
+          }
+        }
+      } catch {
+        // Ignored
+      }
+    }
+
+    // Sanity check: Ensure test product or existing products do not have price <= 0 from earlier bug
+    for (const p of list) {
+      if ((!p.price || p.price <= 0) && p.id === 'prod_teste_050') {
+        p.price = 0.5;
+        p.name = 'Película de Teste (Simulação 50 Centavos)';
+        p.category = 'Capinhas & Películas';
+        cloudDb.saveProduct(p, p.id).catch(() => {});
       }
     }
 
@@ -403,14 +437,16 @@ export const api = {
     // Save to Cloud Firestore
     await cloudDb.createOrder(newOrder);
 
-    // Decrement stock in Cloud Firestore
+    // Decrement stock in Cloud Firestore safely without modifying price or details
     for (const it of verifiedItems) {
       const prod = allProds.find((p) => p.id === it.productId);
       if (prod) {
         const newStock = Math.max(0, prod.stock - it.quantity);
-        await cloudDb.saveProduct({ stock: newStock }, prod.id);
+        prod.stock = newStock;
+        await cloudDb.updateProductStock(prod.id, newStock);
       }
     }
+    localCache.saveProducts(allProds);
 
     return newOrder;
   },

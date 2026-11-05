@@ -6,11 +6,9 @@ import {
   MessageCircle,
   Package,
   Clock,
-  AlertTriangle,
   Store,
   Truck,
-  ShieldCheck,
-  ExternalLink,
+  X,
 } from 'lucide-react';
 import type { Order, StoreSettings } from '../types/index.ts';
 import { generatePixQrCodeDataUrl } from '../utils/pix.ts';
@@ -30,7 +28,6 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
   onTrackOrder,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [autoOpened, setAutoOpened] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>(order?.pixQrCodeBase64 || '');
   const [secondsRemaining, setSecondsRemaining] = useState<number>(30 * 60);
   const [isExpired, setIsExpired] = useState(false);
@@ -89,35 +86,48 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
   const itemsList = (order.items || [])
     .map(
       (it) =>
-        `• ${it.quantity}x ${it.productName} — R$ ${(it.price * it.quantity).toFixed(2).replace('.', ',')}`
+        `• ${it.quantity}x ${it.productName || 'Item'} — R$ ${((it.price || 0) * (it.quantity || 1)).toFixed(2).replace('.', ',')}`
     )
     .join('\n');
+
+  const customerName = order.customer?.fullName || 'Cliente';
+  const customerPhone = order.customer?.phone || '';
+  const customerCpf = order.customer?.cpf || '';
+  const shippingTitle = order.shippingSelection?.title || (isPickup ? 'Retirada no Balcão' : 'Entrega Local');
+  const shippingDays = order.shippingSelection?.estimatedDays || '1 a 3 dias úteis';
+  const street = order.customer?.street || '';
+  const number = order.customer?.number || '';
+  const complement = order.customer?.complement ? ` (${order.customer.complement})` : '';
+  const neighborhood = order.customer?.neighborhood || '';
+  const city = order.customer?.city || 'Arapongas';
+  const state = order.customer?.state || 'PR';
+  const cep = order.customer?.cep || '';
 
   // Format complete WhatsApp notification message directly for the store owner
   const fullOrderText = [
     `*NOVO PEDIDO NO SITE — CONSERTA CELL* 🛒`,
     ``,
     `*Pedido:* #${order.orderNumber}`,
-    `*Cliente:* ${order.customer.fullName}`,
-    `*WhatsApp:* ${order.customer.phone}`,
-    `*CPF:* ${order.customer.cpf}`,
+    `*Cliente:* ${customerName}`,
+    `*WhatsApp:* ${customerPhone}`,
+    `*CPF:* ${customerCpf}`,
     ``,
     `*MODALIDADE DE ENTREGA:*`,
     isPickup
       ? `🏬 RETIRADA NO LOCAL (Balcão Conserta Cell - Arapongas/PR) — Frete Grátis`
-      : `🚚 ${order.shippingSelection.title} (Prazo: ${order.shippingSelection.estimatedDays})`,
+      : `🚚 ${shippingTitle} (Prazo: ${shippingDays})`,
     !isPickup
-      ? `*Endereço:* ${order.customer.street}, nº ${order.customer.number}${order.customer.complement ? ` (${order.customer.complement})` : ''} - ${order.customer.neighborhood}, ${order.customer.city}/${order.customer.state} - CEP: ${order.customer.cep}`
+      ? `*Endereço:* ${street}, nº ${number}${complement} - ${neighborhood}, ${city}/${state} - CEP: ${cep}`
       : `*Local de Retirada:* Loja Física Conserta Cell em Arapongas/PR`,
     ``,
     `*ITENS DO PEDIDO:*`,
     itemsList || '• Itens do pedido',
     ``,
-    `*Subtotal:* R$ ${order.subtotal.toFixed(2).replace('.', ',')}`,
-    `*Frete:* ${isPickup ? 'Grátis (Retirada)' : `R$ ${order.shippingCost.toFixed(2).replace('.', ',')}`}`,
-    `*VALOR TOTAL:* R$ ${order.total.toFixed(2).replace('.', ',')}`,
+    `*Subtotal:* R$ ${(order.subtotal ?? 0).toFixed(2).replace('.', ',')}`,
+    `*Frete:* ${isPickup ? 'Grátis (Retirada)' : `R$ ${(order.shippingCost ?? 0).toFixed(2).replace('.', ',')}`}`,
+    `*VALOR TOTAL:* R$ ${(order.total ?? 0).toFixed(2).replace('.', ',')}`,
     order.paymentMethod === 'credit_card' && order.installments
-      ? `*Forma de Pagamento:* Cartão de Crédito (${order.cardBrand || 'Cartão'}${order.cardLast4 ? ` final ${order.cardLast4}` : ''}) em ${order.installments.count}x de R$ ${order.installments.installmentValue.toFixed(2).replace('.', ',')} ${order.installments.hasInterest ? `(com juros - Total R$ ${order.installments.totalAmount.toFixed(2).replace('.', ',')})` : '(SEM JUROS)'}`
+      ? `*Forma de Pagamento:* Cartão de Crédito (${order.cardBrand || 'Cartão'}${order.cardLast4 ? ` final ${order.cardLast4}` : ''}) em ${order.installments.count}x de R$ ${(order.installments.installmentValue ?? 0).toFixed(2).replace('.', ',')} ${order.installments.hasInterest ? `(com juros - Total R$ ${(order.installments.totalAmount ?? 0).toFixed(2).replace('.', ',')})` : '(SEM JUROS)'}`
       : `*Forma de Pagamento:* PIX Instantâneo`,
     `*Status:* ${paymentConfirmed ? 'PAGAMENTO CONFIRMADO PELO CLIENTE ✅' : 'Aguardando Pagamento'}`,
     ``,
@@ -126,29 +136,10 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
 
   const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(fullOrderText)}`;
 
-  // Auto-open WhatsApp on first creation
-  useEffect(() => {
-    if (order && !autoOpened && !isExpired) {
-      const timer = setTimeout(() => {
-        setAutoOpened(true);
-        const link = document.createElement('a');
-        link.href = whatsappUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }, 1200);
-
-      return () => clearTimeout(timer);
-    }
-  }, [order, autoOpened, whatsappUrl, isExpired]);
-
   // Handle client approving/confirming payment
   const handleConfirmAndNotifyWhatsApp = async () => {
     setConfirmingPayment(true);
     try {
-      // Update order status in system to approved
       await api.updateAdminOrderStatus(
         order.id,
         {
@@ -159,11 +150,9 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
       );
       setPaymentConfirmed(true);
     } catch {
-      // Non-blocking, continue to open WhatsApp
       setPaymentConfirmed(true);
     } finally {
       setConfirmingPayment(false);
-      // Open WhatsApp directly
       window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
     }
   };
@@ -176,8 +165,15 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
       <div className="relative w-full max-w-lg bg-[#141414] border border-[#262626] rounded-2xl shadow-2xl overflow-hidden my-4">
-        {/* Header */}
-        <div className="p-5 sm:p-6 text-center bg-gradient-to-b from-red-950/70 to-[#141414] border-b border-[#222222]">
+        {/* Header with Close X */}
+        <div className="relative p-5 sm:p-6 text-center bg-gradient-to-b from-red-950/70 to-[#141414] border-b border-[#222222]">
+          <button
+            onClick={onClose}
+            aria-label="Fechar"
+            className="absolute top-4 right-4 p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
           <div className="w-12 h-12 bg-red-900/40 rounded-full border border-red-500/50 flex items-center justify-center mx-auto mb-2 text-red-400">
             <CheckCircle2 className="w-7 h-7" />
           </div>
@@ -270,7 +266,7 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
 
               <div className="space-y-1">
                 <p className="text-xs font-bold text-white">
-                  Valor a Pagar: <span className="text-red-400 font-mono text-sm">R$ {order.total.toFixed(2).replace('.', ',')}</span>
+                  Valor a Pagar: <span className="text-red-400 font-mono text-sm">R$ {(order.total ?? 0).toFixed(2).replace('.', ',')}</span>
                 </p>
                 <p className="text-[11px] text-neutral-300">
                   Ou use a chave Pix Copia e Cola abaixo:
@@ -342,7 +338,7 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
               ) : (
                 <Truck className="w-4 h-4 text-red-400 shrink-0" />
               )}
-              <span className="font-bold text-white">{order.shippingSelection.title}</span>
+              <span className="font-bold text-white">{shippingTitle}</span>
             </div>
 
             {isPickup ? (
@@ -354,17 +350,16 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
                   Endereço da loja: {settings?.address || 'Arapongas — PR'}
                 </p>
                 <p className="text-neutral-400 text-[11px]">
-                  Horário: {settings?.hours.weekday || 'Segunda a sexta das 08h30 às 19h'}
+                  Horário: {settings?.hours?.weekday || 'Segunda a sexta das 08h30 às 19h'}
                 </p>
               </div>
             ) : (
               <div className="space-y-0.5 text-neutral-300">
                 <p>
-                  {order.customer.street}, nº {order.customer.number}{' '}
-                  {order.customer.complement ? `(${order.customer.complement})` : ''} - {order.customer.neighborhood}, {order.customer.city}/{order.customer.state}
+                  {street ? `${street}, nº ${number || 'S/N'}${complement} - ${neighborhood}, ${city}/${state}` : 'Endereço fornecido pelo cliente'}
                 </p>
                 <p className="text-neutral-400 text-[11px]">
-                  Prazo estimado: {order.shippingSelection.estimatedDays}
+                  Prazo estimado: {shippingDays}
                 </p>
               </div>
             )}

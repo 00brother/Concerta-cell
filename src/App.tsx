@@ -15,6 +15,7 @@ import { Footer } from './components/Footer.tsx';
 import { WhatsAppButton } from './components/WhatsAppButton.tsx';
 import { AdminPanel } from './components/AdminPanel.tsx';
 import { CartProvider } from './context/CartContext.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { api } from './services/api.ts';
 import type { Product, StoreSettings, Order } from './types/index.ts';
 import { Search, SlidersHorizontal, Plus, MessageCircle, AlertCircle, ShoppingBag, Sparkles } from 'lucide-react';
@@ -348,8 +349,10 @@ export function AppContent() {
 
 export default function App() {
   return (
-    <CartProvider>
-      <AppContent />
-    </CartProvider>
+    <ErrorBoundary>
+      <CartProvider>
+        <AppContent />
+      </CartProvider>
+    </ErrorBoundary>
   );
 }
