@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { db } from './db.ts';
 import type { ShippingOption, OrderStatus, Product } from '../src/types/index.ts';
 import { generatePixBrCode, generatePixQrCodeDataUrl } from '../src/utils/pix.ts';
+import { asaasService } from './asaas.ts';
 
 export const apiRouter = Router();
 
@@ -480,122 +481,115 @@ apiRouter.post('/orders', async (req: Request, res: Response) => {
 
   const total = Number((subtotal + selectedShipping.price).toFixed(2));
 
+  // Determine next order number for Asaas externalReference correlation
+  const existingOrdersCount = db.getOrders().length;
+  const orderNumber = `CC-${existingOrdersCount + 1001}`;
+
   // Installments calculation: up to 3x sem juros, up to 21x with interest
   let installmentPlan = undefined;
   if (paymentMethod === 'credit_card') {
-    const count = Math.min(21, Math.max(1, parseInt(installmentsCount, 10) || 1));
-    const maxInterestFree = settings.payment.maxInterestFree || 3;
-    const hasInterest = count > maxInterestFree;
-    const monthlyRate = (settings.payment.interestRateMonthly || 1.99) / 100;
-
-    let totalAmount = total;
-    if (hasInterest) {
-      totalAmount = total * Math.pow(1 + monthlyRate, count);
-    }
-    const installmentValue = Number((totalAmount / count).toFixed(2));
-    installmentPlan = {
-      count,
-      installmentValue,
-      totalAmount: Number(totalAmount.toFixed(2)),
-      hasInterest,
-      interestRate: hasInterest ? settings.payment.interestRateMonthly : 0,
-    };
+    installmentPlan = asaasService.calculateInstallmentPlan(
+      total,
+      parseInt(installmentsCount, 10) || 1,
+      settings.payment.maxInterestFree || 3,
+      settings.payment.maxInstallments || 21,
+      settings.payment.interestRateMonthly || 1.99
+    );
   }
 
-  // Payment processing with Mercado Pago or standard direct fallback
-  let pixCode = undefined;
-  let pixQrCodeBase64 = undefined;
-  let mpPaymentId = undefined;
+  // Payment processing with Asaas
+  let pixCode: string | undefined = undefined;
+  let pixQrCodeBase64: string | undefined = undefined;
+  let asaasPaymentId: string | undefined = undefined;
+  let asaasCustomerId: string | undefined = undefined;
+  let asaasInvoiceUrl: string | undefined = undefined;
+  let asaasStatus: string | undefined = undefined;
+  let finalCardBrand: string | undefined = cardBrand;
+  let finalCardLast4: string | undefined = cardLast4;
+  let initialStatus: OrderStatus = 'pending';
+  let paidAt: string | undefined = undefined;
 
-  const mpAccessToken = settings.payment.accessToken?.trim();
+  const isAsaasConfigured = asaasService.isConfigured(settings.payment);
 
-  if (mpAccessToken && paymentMethod === 'pix') {
-    // Process real PIX payment via Mercado Pago API
+  if (paymentMethod === 'pix') {
+    if (isAsaasConfigured) {
+      try {
+        const pixRes = await asaasService.createPixCharge({
+          customer,
+          amount: total,
+          orderNumber,
+          customConfig: settings.payment,
+        });
+
+        pixCode = pixRes.pixCode;
+        pixQrCodeBase64 = pixRes.pixQrCodeBase64;
+        asaasPaymentId = pixRes.paymentId;
+        asaasCustomerId = pixRes.customerId;
+        asaasInvoiceUrl = pixRes.invoiceUrl;
+        asaasStatus = pixRes.status;
+      } catch (err: any) {
+        console.error('[Asaas] Erro ao criar cobrança PIX:', err);
+        res.status(400).json({
+          error: `Erro ao gerar cobrança PIX no Asaas: ${err.message || 'Verifique as credenciais.'}`,
+        });
+        return;
+      }
+    } else {
+      // Asaas not configured yet with API key:
+      // Record order without simulating fake PIX or pretending charge was registered
+      console.warn('[Asaas] API Key do Asaas não configurada. Pedido registrado em modo de configuração.');
+    }
+  } else if (paymentMethod === 'credit_card') {
+    if (!isAsaasConfigured) {
+      res.status(400).json({
+        error:
+          'O processamento de cartão de crédito requer a configuração da chave de API do Asaas no servidor (ASAAS_API_KEY ou no Painel Administrativo).',
+      });
+      return;
+    }
+
+    const creditCard = req.body.creditCard;
+    if (
+      !creditCard ||
+      !creditCard.number ||
+      !creditCard.holderName ||
+      !creditCard.ccv ||
+      !creditCard.expiryMonth ||
+      !creditCard.expiryYear
+    ) {
+      res.status(400).json({
+        error: 'Dados completos do cartão de crédito são obrigatórios para processamento seguro via Asaas.',
+      });
+      return;
+    }
+
     try {
-      const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${mpAccessToken}`,
-          'X-Idempotency-Key': crypto.randomUUID(),
-        },
-        body: JSON.stringify({
-          transaction_amount: total,
-          description: `Pedido Conserta Cell - ${customer.fullName}`,
-          payment_method_id: 'pix',
-          payer: {
-            email: customer.email,
-            first_name: customer.fullName.split(' ')[0],
-            last_name: customer.fullName.split(' ').slice(1).join(' ') || 'Cliente',
-            identification: {
-              type: 'CPF',
-              number: customer.cpf.replace(/\D/g, ''),
-            },
-          },
-        }),
+      const cardRes = await asaasService.createCreditCardCharge({
+        customer,
+        orderNumber,
+        totalAmount: total,
+        installments: installmentPlan,
+        creditCard,
+        customConfig: settings.payment,
       });
 
-      if (mpResponse.ok) {
-        const mpData = await mpResponse.json();
-        mpPaymentId = String(mpData.id);
-        pixCode = mpData.point_of_interaction?.transaction_data?.qr_code;
-        pixQrCodeBase64 = mpData.point_of_interaction?.transaction_data?.qr_code_base64;
+      asaasPaymentId = cardRes.paymentId;
+      asaasCustomerId = cardRes.customerId;
+      asaasInvoiceUrl = cardRes.invoiceUrl;
+      asaasStatus = cardRes.status;
+      finalCardBrand = cardRes.cardBrand;
+      finalCardLast4 = cardRes.cardLast4;
+
+      if (cardRes.status === 'CONFIRMED' || cardRes.status === 'RECEIVED') {
+        initialStatus = 'approved';
+        paidAt = new Date().toISOString();
       }
-    } catch (mpErr) {
-      console.warn('[MercadoPago] Falha ao chamar API do Mercado Pago:', mpErr);
-    }
-  }
-
-  // Generate official standard Central Bank PIX code with valid CRC16 & QR code
-  if (paymentMethod === 'pix' && !pixCode) {
-    const pixKey = settings.payment.pixKey || '43998370350';
-    pixCode = generatePixBrCode({
-      key: pixKey,
-      recipientName: settings.payment.pixRecipientName || settings.companyName || 'CONSERTA CELL',
-      city: 'ARAPONGAS',
-      amount: total,
-      txId: `CC${Date.now().toString().slice(-6)}`,
-      description: 'Pedido Conserta Cell',
-    });
-
-    try {
-      pixQrCodeBase64 = await generatePixQrCodeDataUrl(pixCode);
-    } catch {
-      // Ignored
-    }
-  }
-
-  // Credit Card token processing
-  if (paymentMethod === 'credit_card' && mpAccessToken && cardToken) {
-    try {
-      const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${mpAccessToken}`,
-          'X-Idempotency-Key': crypto.randomUUID(),
-        },
-        body: JSON.stringify({
-          transaction_amount: installmentPlan?.totalAmount || total,
-          token: cardToken,
-          installments: installmentsCount || 1,
-          payment_method_id: cardBrand || 'master',
-          payer: {
-            email: customer.email,
-            identification: {
-              type: 'CPF',
-              number: customer.cpf.replace(/\D/g, ''),
-            },
-          },
-        }),
+    } catch (err: any) {
+      console.error('[Asaas] Falha no pagamento com cartão:', err);
+      res.status(400).json({
+        error: `Pagamento com cartão não autorizado: ${err.message || 'Verifique os dados informados.'}`,
       });
-
-      if (mpResponse.ok) {
-        const mpData = await mpResponse.json();
-        mpPaymentId = String(mpData.id);
-      }
-    } catch (mpErr) {
-      console.warn('[MercadoPago] Falha ao processar cartão com Mercado Pago:', mpErr);
+      return;
     }
   }
 
@@ -608,12 +602,16 @@ apiRouter.post('/orders', async (req: Request, res: Response) => {
     total,
     paymentMethod: paymentMethod === 'credit_card' ? 'credit_card' : 'pix',
     installments: installmentPlan,
-    status: 'pending',
+    status: initialStatus,
+    paidAt,
     pixCode,
     pixQrCodeBase64,
-    cardBrand: cardBrand || (paymentMethod === 'credit_card' ? 'Cartão' : undefined),
-    cardLast4: cardLast4 || undefined,
-    mpPaymentId,
+    cardBrand: finalCardBrand || (paymentMethod === 'credit_card' ? 'Cartão' : undefined),
+    cardLast4: finalCardLast4 || undefined,
+    asaasPaymentId,
+    asaasCustomerId,
+    asaasInvoiceUrl,
+    asaasStatus,
   });
 
   res.status(201).json(order);
@@ -729,59 +727,130 @@ apiRouter.post('/admin/credentials', requireAdmin, (req: Request, res: Response)
 });
 
 // -------------------------------------------------------------
-// 6. PAYMENT WEBHOOK (MERCADO PAGO)
+// 6. ASAAS PAYMENT WEBHOOK & STATUS INQUIRY
 // -------------------------------------------------------------
 
-apiRouter.post('/webhooks/mercadopago', async (req: Request, res: Response) => {
+apiRouter.post('/webhooks/asaas', async (req: Request, res: Response) => {
   const settings = db.getSettings();
-  const signature = req.headers['x-signature'];
+  const tokenHeader = (req.headers['asaas-access-token'] as string) || '';
 
-  // Security check: Validate signature if secret configured
-  if (settings.payment.webhookSecret) {
-    if (!signature) {
-      console.warn('[WEBHOOK] Notificação recebida sem assinatura x-signature.');
-      res.status(403).json({ error: 'Assinatura x-signature ausente.' });
-      return;
-    }
+  // 1. Validate Webhook Security Token
+  const isTokenValid = asaasService.verifyWebhookToken(tokenHeader, settings.payment);
+  if (!isTokenValid) {
+    console.warn('[Asaas Webhook] Notificação rejeitada: token de webhook inválido.');
+    res.status(401).json({ error: 'Token de autenticação do webhook inválido.' });
+    return;
   }
 
-  const paymentId = req.body?.data?.id || req.query['data.id'] || req.query.id;
-  db.logAction('WEBHOOK_RECEIVED', `Notificação de pagamento recebida para o ID: ${paymentId}`);
+  const { event, payment } = req.body || {};
+  if (!event || !payment) {
+    res.status(400).json({ error: 'Payload de webhook incompleto.' });
+    return;
+  }
 
-  // If real Mercado Pago token is present, query payment status directly from Mercado Pago
-  if (paymentId && settings.payment.accessToken) {
+  const paymentId = payment.id;
+  const externalRef = payment.externalReference;
+  db.logAction('ASAAS_WEBHOOK', `Evento "${event}" recebido para a cobrança ${paymentId} (${externalRef || 'sem ref'})`);
+
+  const allOrders = db.getOrders();
+  const targetOrder = allOrders.find(
+    (o) =>
+      (externalRef && o.orderNumber === externalRef) ||
+      (paymentId && o.asaasPaymentId === paymentId) ||
+      (externalRef && o.id === externalRef)
+  );
+
+  if (!targetOrder) {
+    console.warn(`[Asaas Webhook] Nenhum pedido local corresponde à cobrança ${paymentId} / ${externalRef}`);
+    res.status(200).json({ status: 'ignored', message: 'Pedido não encontrado.' });
+    return;
+  }
+
+  // Idempotency: Prevent double processing
+  if (
+    (event === 'PAYMENT_CONFIRMED' || event === 'PAYMENT_RECEIVED') &&
+    targetOrder.status === 'approved'
+  ) {
+    console.log(`[Asaas Webhook] Pedido ${targetOrder.orderNumber} já se encontra aprovado. Ignorando.`);
+    res.status(200).json({ status: 'already_processed' });
+    return;
+  }
+
+  if (event === 'PAYMENT_CONFIRMED' || event === 'PAYMENT_RECEIVED') {
+    db.updateOrderStatus(
+      targetOrder.id,
+      'approved',
+      `Pagamento de R$ ${payment.value || targetOrder.total} confirmado legitimamente pelo Asaas (${payment.billingType || 'Cobrança'}).`
+    );
+    console.log(`[Asaas Webhook] ✅ Pedido ${targetOrder.orderNumber} APROVADO via Asaas.`);
+  } else if (event === 'PAYMENT_OVERDUE' || event === 'PAYMENT_DELETED') {
+    if (targetOrder.status === 'pending') {
+      db.updateOrderStatus(
+        targetOrder.id,
+        'cancelled',
+        `Cobrança cancelada ou vencida no Asaas (${event}).`
+      );
+    }
+  } else if (event === 'PAYMENT_REFUNDED') {
+    db.updateOrderStatus(
+      targetOrder.id,
+      'cancelled',
+      `Pagamento estornado no Asaas.`
+    );
+  }
+
+  res.status(200).json({ status: 'success', received: true });
+});
+
+// Also keep legacy /webhooks/mercadopago endpoint for safety, returning 200
+apiRouter.post('/webhooks/mercadopago', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok', provider: 'migrated_to_asaas' });
+});
+
+// 7. REAL-TIME PAYMENT STATUS CHECK
+apiRouter.get('/orders/:id/payment-status', async (req: Request, res: Response) => {
+  const order = db.getOrderById(req.params.id);
+  if (!order) {
+    res.status(404).json({ error: 'Pedido não localizado.' });
+    return;
+  }
+
+  const settings = db.getSettings();
+  if (order.status === 'pending' && order.asaasPaymentId && asaasService.isConfigured(settings.payment)) {
     try {
-      const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-        headers: {
-          Authorization: `Bearer ${settings.payment.accessToken}`,
-        },
-      });
-
-      if (mpRes.ok) {
-        const paymentData = await mpRes.json();
-        if (paymentData.status === 'approved') {
-          // Find matching order by external_reference or order ID
-          const allOrders = db.getOrders();
-          const targetOrder = allOrders.find(
-            (o) =>
-              o.orderNumber === paymentData.external_reference ||
-              o.id === paymentData.external_reference ||
-              o.mpPaymentId === String(paymentId)
-          );
-
-          if (targetOrder) {
-            db.updateOrderStatus(
-              targetOrder.id,
-              'approved',
-              'Pagamento confirmado e aprovado automaticamente via Webhook Mercado Pago.'
-            );
-          }
-        }
+      const asaasStatus = await asaasService.getPaymentStatus(order.asaasPaymentId, settings.payment);
+      if (asaasStatus.status === 'CONFIRMED' || asaasStatus.status === 'RECEIVED') {
+        const updated = db.updateOrderStatus(
+          order.id,
+          'approved',
+          'Pagamento confirmado e verificado em tempo real com o Asaas.'
+        );
+        res.json({ order: updated, asaas: asaasStatus, updated: true });
+        return;
       }
     } catch (err) {
-      console.error('[WEBHOOK] Erro ao consultar pagamento no Mercado Pago:', err);
+      console.warn('[Asaas] Falha ao consultar status em tempo real:', err);
     }
   }
 
-  res.status(200).json({ status: 'ok', received: true });
+  res.json({ order, updated: false });
+});
+
+// 8. ADMIN ASAAS STATUS ENDPOINT
+apiRouter.get('/admin/asaas/status', requireAdmin, (_req: Request, res: Response) => {
+  const settings = db.getSettings();
+  const isConfigured = asaasService.isConfigured(settings.payment);
+  const environment = asaasService.getEnvironment(settings.payment);
+  const maskedKey = asaasService.maskApiKey(settings.payment.apiKey);
+  const webhookConfigured = Boolean(
+    process.env.ASAAS_WEBHOOK_TOKEN || settings.payment.webhookAccessToken
+  );
+
+  res.json({
+    isConfigured,
+    environment,
+    maskedKey,
+    webhookConfigured,
+    provider: 'asaas',
+  });
 });

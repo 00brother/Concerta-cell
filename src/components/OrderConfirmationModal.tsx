@@ -58,6 +58,25 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
     return () => clearInterval(interval);
   }, [order]);
 
+  // Real-time Asaas payment status polling
+  useEffect(() => {
+    if (!order || paymentConfirmed || isExpired) return;
+
+    const pollStatus = async () => {
+      try {
+        const updated = await api.checkPaymentStatus(order.id);
+        if (updated && updated.status === 'approved') {
+          setPaymentConfirmed(true);
+        }
+      } catch {
+        // Polling retry
+      }
+    };
+
+    const pollInterval = setInterval(pollStatus, 5000);
+    return () => clearInterval(pollInterval);
+  }, [order, paymentConfirmed, isExpired]);
+
   // Ensure high-resolution QR code is always ready
   useEffect(() => {
     if (order?.paymentMethod === 'pix' && order.pixCode) {
@@ -245,70 +264,88 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
           {/* PIX Payment Box with QR Code & Copia e Cola */}
           {order.paymentMethod === 'pix' && !isExpired && (
             <div className="bg-[#181818] p-4 sm:p-5 rounded-xl border border-red-900/50 space-y-3.5 text-center shadow-lg">
-              <span className="text-xs font-bold text-white uppercase tracking-wider block">
-                QR CODE PIX — ESCANEIE COM SEU BANCO
-              </span>
+              {order.pixCode ? (
+                <>
+                  <span className="text-xs font-bold text-white uppercase tracking-wider block">
+                    QR CODE PIX OFICIAL ASAAS — ESCANEIE COM SEU BANCO
+                  </span>
 
-              {/* High resolution QR Code */}
-              {qrCodeDataUrl ? (
-                <div className="w-44 h-44 sm:w-48 sm:h-48 mx-auto bg-white p-2.5 rounded-2xl shadow-xl flex items-center justify-center border-2 border-neutral-700">
-                  <img
-                    src={qrCodeDataUrl}
-                    alt="QR Code Pix Oficial Conserta Cell"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="w-44 h-44 mx-auto bg-neutral-900 rounded-2xl flex items-center justify-center text-xs text-neutral-400">
-                  Carregando QR Code...
-                </div>
-              )}
+                  {/* High resolution QR Code */}
+                  {qrCodeDataUrl ? (
+                    <div className="w-44 h-44 sm:w-48 sm:h-48 mx-auto bg-white p-2.5 rounded-2xl shadow-xl flex items-center justify-center border-2 border-neutral-700">
+                      <img
+                        src={qrCodeDataUrl}
+                        alt="QR Code Pix Oficial Asaas"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-44 h-44 mx-auto bg-neutral-900 rounded-2xl flex items-center justify-center text-xs text-neutral-400">
+                      Carregando QR Code Asaas...
+                    </div>
+                  )}
 
-              <div className="space-y-1">
-                <p className="text-xs font-bold text-white">
-                  Valor a Pagar: <span className="text-red-400 font-mono text-sm">R$ {(order.total ?? 0).toFixed(2).replace('.', ',')}</span>
-                </p>
-                <p className="text-[11px] text-neutral-300">
-                  Ou use a chave Pix Copia e Cola abaixo:
-                </p>
-              </div>
-
-              {order.pixCode && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 bg-[#101010] p-2 rounded-xl border border-[#333333]">
-                    <input
-                      type="text"
-                      readOnly
-                      value={order.pixCode}
-                      className="flex-1 bg-transparent text-xs text-neutral-300 font-mono truncate focus:outline-none select-all"
-                    />
-                    <button
-                      onClick={handleCopyPix}
-                      className="bg-[#E50914] hover:bg-[#c80812] active:scale-95 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer shrink-0 flex items-center gap-1.5"
-                    >
-                      {copied ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Copiado!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>Copiar PIX</span>
-                        </>
-                      )}
-                    </button>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-white">
+                      Valor a Pagar: <span className="text-red-400 font-mono text-sm">R$ {(order.total ?? 0).toFixed(2).replace('.', ',')}</span>
+                    </p>
+                    <p className="text-[11px] text-neutral-300">
+                      Ou use a chave Pix Copia e Cola oficial do Asaas abaixo:
+                    </p>
                   </div>
-                  <p className="text-[10px] text-neutral-400 text-right">
-                    Código padrão BR Code Banco Central do Brasil.
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 bg-[#101010] p-2 rounded-xl border border-[#333333]">
+                      <input
+                        type="text"
+                        readOnly
+                        value={order.pixCode}
+                        className="flex-1 bg-transparent text-xs text-neutral-300 font-mono truncate focus:outline-none select-all"
+                      />
+                      <button
+                        onClick={handleCopyPix}
+                        className="bg-[#E50914] hover:bg-[#c80812] active:scale-95 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer shrink-0 flex items-center gap-1.5"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copiar PIX</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-emerald-400 text-center font-medium">
+                      ✓ Cobrança oficial Asaas com baixa automática do pagamento.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="p-3 bg-neutral-900/90 rounded-xl border border-neutral-700/60 text-left space-y-2">
+                  <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
+                    <Clock className="w-4 h-4 shrink-0" />
+                    <span>Integração Asaas em Modo de Configuração</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-relaxed">
+                    Seu pedido foi registrado com sucesso no sistema. A chave secreta de API do Asaas (<strong>ASAAS_API_KEY</strong>) ainda não foi inserida no servidor pelo administrador.
+                  </p>
+                  <p className="text-[11px] text-neutral-400 leading-relaxed">
+                    Para prosseguir, clique no botão verde abaixo para enviar seu pedido diretamente ao WhatsApp da Conserta Cell.
                   </p>
                 </div>
               )}
 
               <div className="text-[11px] text-neutral-400 text-left pt-1 space-y-1 bg-[#121212] p-2.5 rounded-lg border border-[#242424]">
-                <p>• Chave Pix: <strong className="text-white font-mono">{settings?.payment.pixKey || '(43) 99837-0350'}</strong></p>
-                <p>• Favorecido: <strong className="text-white">{settings?.payment.pixRecipientName || 'Conserta Cell Arapongas'}</strong></p>
+                <p>• Loja: <strong className="text-white">Conserta Cell Arapongas</strong></p>
+                <p>• Telefone/WhatsApp: <strong className="text-white font-mono">{settings?.whatsapp || '(43) 99837-0350'}</strong></p>
                 <p>• Cidade: <strong className="text-white">Arapongas — PR</strong></p>
+                {order.asaasPaymentId && (
+                  <p>• ID Asaas: <strong className="text-white font-mono">{order.asaasPaymentId}</strong></p>
+                )}
               </div>
             </div>
           )}

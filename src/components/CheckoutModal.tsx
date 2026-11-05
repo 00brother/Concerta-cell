@@ -310,8 +310,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setErrorMsg('');
 
     try {
-      // Safe card tokenization simulation / client token
-      let cardToken = undefined;
+      let creditCardPayload = undefined;
       let cardLast4 = undefined;
       let cardBrand = 'visa';
 
@@ -319,9 +318,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         const cleanCard = cardNumber.replace(/\D/g, '');
         cardLast4 = cleanCard.substring(cleanCard.length - 4);
         cardBrand = detectedBrand ? detectedBrand.toLowerCase() : 'master';
+        const expParts = cardExp.split('/');
 
-        // Generate secure client-side token reference (never sending raw card to database)
-        cardToken = `tok_${crypto.randomUUID().replace(/-/g, '')}`;
+        creditCardPayload = {
+          holderName: cardHolder.trim().toUpperCase(),
+          number: cleanCard,
+          expiryMonth: expParts[0] || '',
+          expiryYear: expParts[1] || '',
+          ccv: cardCvv.trim(),
+        };
       }
 
       const payload = {
@@ -339,7 +344,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         shippingSelection: shippingOption,
         paymentMethod,
         installmentsCount: paymentMethod === 'credit_card' ? installmentsCount : 1,
-        cardToken,
+        creditCard: creditCardPayload,
         cardLast4,
         cardBrand,
       };
@@ -733,7 +738,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
                   <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 pt-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Dados protegidos por tokenização segura.</span>
+                    <span>Transação protegida e processada diretamente pelo Asaas.</span>
                   </div>
                 </div>
               )}

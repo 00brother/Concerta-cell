@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import type { Product, StoreSettings, Order, AuditLog, OrderStatus } from '../src/types/index.ts';
+import { asaasService } from './asaas.ts';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'consertacell_db.json');
@@ -71,11 +72,11 @@ const DEFAULT_SETTINGS: StoreSettings = {
       'Cálculo baseado na tabela de CEPs dos Correios (PAC e SEDEX). Conecte suas credenciais da API dos Correios ou Melhor Envio no painel.',
   },
   payment: {
-    provider: 'mercadopago',
-    isConfigured: false,
-    publicKey: '',
-    accessToken: '',
-    webhookSecret: '',
+    provider: 'asaas',
+    isConfigured: Boolean(process.env.ASAAS_API_KEY),
+    environment: (process.env.ASAAS_ENVIRONMENT as any) || 'sandbox',
+    apiKey: '',
+    webhookAccessToken: '',
     maxInstallments: 21,
     maxInterestFree: 3,
     interestRateMonthly: 1.99,
@@ -172,9 +173,10 @@ class DatabaseManager {
     payment: {
       provider: string;
       isConfigured: boolean;
-      publicKey?: string;
+      environment: 'sandbox' | 'production';
       maxInstallments: number;
       maxInterestFree: number;
+      interestRateMonthly: number;
       pixKey?: string;
       pixKeyType?: string;
       pixRecipientName?: string;
@@ -187,14 +189,18 @@ class DatabaseManager {
     };
   } {
     const { payment, correios, ...rest } = this.data.settings;
+    const isAsaasConfigured = asaasService.isConfigured(payment);
+    const asaasEnv = asaasService.getEnvironment(payment);
+
     return {
       ...rest,
       payment: {
-        provider: payment.provider,
-        isConfigured: payment.isConfigured,
-        publicKey: payment.publicKey || '',
-        maxInstallments: payment.maxInstallments,
-        maxInterestFree: payment.maxInterestFree,
+        provider: 'asaas',
+        isConfigured: isAsaasConfigured,
+        environment: asaasEnv,
+        maxInstallments: payment.maxInstallments || 21,
+        maxInterestFree: payment.maxInterestFree || 3,
+        interestRateMonthly: payment.interestRateMonthly || 1.99,
         pixKey: payment.pixKey,
         pixKeyType: payment.pixKeyType,
         pixRecipientName: payment.pixRecipientName,

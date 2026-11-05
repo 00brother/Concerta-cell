@@ -42,6 +42,8 @@
         "status": { "type": "string" },
         "expiresAt": { "type": "string" },
         "paidAt": { "type": "string" },
+        "asaasPaymentId": { "type": "string" },
+        "asaasInvoiceUrl": { "type": "string" },
         "createdAt": { "type": "string" },
         "updatedAt": { "type": "string" }
       },

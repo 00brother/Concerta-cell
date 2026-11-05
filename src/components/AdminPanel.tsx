@@ -87,6 +87,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [credentialsMsg, setCredentialsMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [credentialsLoading, setCredentialsLoading] = useState(false);
 
+  // Asaas Integration State
+  const [asaasStatus, setAsaasStatus] = useState<{
+    isConfigured: boolean;
+    environment: 'sandbox' | 'production';
+    maskedKey: string;
+    webhookConfigured: boolean;
+  } | null>(null);
+  const [asaasApiKeyInput, setAsaasApiKeyInput] = useState('');
+  const [checkingAsaasPayment, setCheckingAsaasPayment] = useState(false);
+
   // Product Form State
   const [prodForm, setProdForm] = useState({
     name: '',
@@ -135,6 +145,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       try {
         const data = await api.getAdminSettings(token);
         setSettings(data);
+        const asaasData = await api.getAdminAsaasStatus(token);
+        setAsaasStatus(asaasData);
       } catch (e) {
         console.error(e);
       } finally {
@@ -1011,53 +1023,144 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </div>
 
                       {/* Section: Payment Gateway & Installments */}
-                      <div className="bg-[#141414] p-4 sm:p-5 rounded-2xl border border-[#262626] space-y-3.5">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-red-500 flex items-center gap-1.5">
-                          <CreditCard className="w-4 h-4" />
-                          Pagamentos & Mercado Pago
-                        </h4>
+                      {/* Section: Asaas Payment Gateway & Installments */}
+                      <div className="bg-[#141414] p-4 sm:p-5 rounded-2xl border border-[#262626] space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#222222]">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4 text-red-500" />
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+                              Integração de Pagamentos Asaas
+                            </h4>
+                          </div>
 
+                          <div className="flex items-center gap-2">
+                            {asaasStatus?.isConfigured || settings.payment.isConfigured ? (
+                              <span className="text-[11px] font-bold text-emerald-400 bg-emerald-950/70 border border-emerald-800/80 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                Asaas Ativo ({settings.payment.environment === 'production' ? 'Produção' : 'Sandbox / Testes'})
+                              </span>
+                            ) : (
+                              <span className="text-[11px] font-bold text-amber-400 bg-amber-950/70 border border-amber-800/80 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                                Aguardando Chave de API
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Asaas Provider & Environment */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                           <div>
-                            <label className="block text-neutral-300 mb-1 font-medium">Chave PIX da Conserta Cell</label>
-                            <input
-                              type="text"
-                              value={settings.payment.pixKey || ''}
+                            <label className="block text-neutral-300 mb-1 font-medium">Provedor de Pagamentos</label>
+                            <select
+                              value={settings.payment.provider || 'asaas'}
                               onChange={(e) =>
                                 setSettings({
                                   ...settings,
                                   payment: {
                                     ...settings.payment,
-                                    pixKey: e.target.value,
+                                    provider: e.target.value as any,
                                   },
                                 })
                               }
-                              placeholder="(43) 99837-0350"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none"
+                            >
+                              <option value="asaas">Asaas (Oficial — PIX & Cartão)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-neutral-300 mb-1 font-medium">Ambiente Asaas</label>
+                            <select
+                              value={settings.payment.environment || 'sandbox'}
+                              onChange={(e) =>
+                                setSettings({
+                                  ...settings,
+                                  payment: {
+                                    ...settings.payment,
+                                    environment: e.target.value as any,
+                                  },
+                                })
+                              }
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none"
+                            >
+                              <option value="sandbox">Sandbox (Ambiente de Testes / Homologação)</option>
+                              <option value="production">Produção (Cobranças Reais)</option>
+                            </select>
+                          </div>
+
+                          {/* Secret API Key */}
+                          <div className="sm:col-span-2">
+                            <label className="block text-neutral-300 mb-1 font-medium">
+                              Chave de API do Asaas (ASAAS_API_KEY)
+                            </label>
+                            <input
+                              type="password"
+                              value={asaasApiKeyInput}
+                              onChange={(e) => {
+                                setAsaasApiKeyInput(e.target.value);
+                                setSettings({
+                                  ...settings,
+                                  payment: {
+                                    ...settings.payment,
+                                    apiKey: e.target.value || settings.payment.apiKey,
+                                    isConfigured: Boolean(e.target.value || settings.payment.apiKey),
+                                  },
+                                });
+                              }}
+                              placeholder={
+                                asaasStatus?.maskedKey ||
+                                (settings.payment.apiKey
+                                  ? `${settings.payment.apiKey.substring(0, 6)}••••••••`
+                                  : '$aact_...')
+                              }
                               className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono focus:border-red-500 focus:outline-none"
                             />
+                            <p className="text-[11px] text-neutral-400 mt-1">
+                              * A chave é mantida exclusivamente no servidor e nunca é exposta no frontend. Pode ser definida no arquivo <strong>.env</strong> (<code>ASAAS_API_KEY</code>) ou atualizada diretamente aqui.
+                            </p>
                           </div>
 
-                          <div>
-                            <label className="block text-neutral-300 mb-1 font-medium">Nome do Favorecido no PIX</label>
+                          {/* Webhook Access Token */}
+                          <div className="sm:col-span-2">
+                            <label className="block text-neutral-300 mb-1 font-medium">
+                              Token de Autenticação do Webhook Asaas
+                            </label>
                             <input
-                              type="text"
-                              value={settings.payment.pixRecipientName || ''}
+                              type="password"
+                              value={settings.payment.webhookAccessToken || ''}
                               onChange={(e) =>
                                 setSettings({
                                   ...settings,
                                   payment: {
                                     ...settings.payment,
-                                    pixRecipientName: e.target.value,
+                                    webhookAccessToken: e.target.value,
                                   },
                                 })
                               }
-                              placeholder="Conserta Cell Arapongas"
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none"
+                              placeholder="Defina o token cadastrado na configuração do webhook no Asaas"
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono focus:border-red-500 focus:outline-none"
                             />
+                            <div className="mt-2 p-2.5 bg-neutral-900 rounded-lg border border-neutral-800 text-[11px] text-neutral-300 space-y-1">
+                              <p className="font-semibold text-white">URL do Webhook para cadastrar no Asaas:</p>
+                              <code className="text-red-400 font-mono select-all bg-black/60 px-2 py-0.5 rounded block">
+                                {window.location.origin}/api/webhooks/asaas
+                              </code>
+                              <p className="text-neutral-400 text-[10px]">
+                                Eventos recomendados: <code>PAYMENT_CONFIRMED</code>, <code>PAYMENT_RECEIVED</code>, <code>PAYMENT_OVERDUE</code>, <code>PAYMENT_REFUNDED</code>.
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Installments Configuration */}
+                          <div className="sm:col-span-2 pt-2 border-t border-[#222222]">
+                            <h5 className="font-bold text-white text-xs mb-2">Condições de Parcelamento no Cartão</h5>
                           </div>
 
                           <div>
-                            <label className="block text-neutral-300 mb-1 font-medium">Máximo de Parcelas Sem Juros</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">
+                              Parcelas Sem Juros (Padrão: 3x)
+                            </label>
                             <input
                               type="number"
                               min="1"
@@ -1074,11 +1177,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               }
                               className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none"
                             />
-                            <span className="text-[10px] text-neutral-400">Requisito da loja: até 3x sem juros</span>
+                            <span className="text-[10px] text-neutral-400">Requisito da loja: até 3x sem juros para o cliente</span>
                           </div>
 
                           <div>
-                            <label className="block text-neutral-300 mb-1 font-medium">Máximo Total de Parcelas (Cartão)</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">
+                              Máximo Total de Parcelas (Até 21x)
+                            </label>
                             <input
                               type="number"
                               min="1"
@@ -1095,51 +1200,49 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                               }
                               className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none"
                             />
-                            <span className="text-[10px] text-neutral-400">Requisito da loja: possibilidade até 21x</span>
-                          </div>
-
-                          <div className="sm:col-span-2 pt-3 border-t border-[#222222]">
-                            <p className="text-neutral-200 font-semibold mb-1">Chaves do Mercado Pago Developers</p>
-                            <p className="text-[11px] text-neutral-400 mb-2 leading-relaxed">
-                              Ao criar uma aplicação no portal do <strong>Mercado Pago Developers</strong>, cole as duas chaves abaixo para ativação instantânea do PIX com baixa automática e cartão de crédito parcelado:
-                            </p>
+                            <span className="text-[10px] text-neutral-400">Requisito da loja: até 21 parcelas permitidas</span>
                           </div>
 
                           <div>
-                            <label className="block text-neutral-300 mb-1 font-medium">Mercado Pago Public Key (Frontend)</label>
+                            <label className="block text-neutral-300 mb-1 font-medium">
+                              Taxa de Juros Mensal (% ao mês para parcelas com juros)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={settings.payment.interestRateMonthly || 1.99}
+                              onChange={(e) =>
+                                setSettings({
+                                  ...settings,
+                                  payment: {
+                                    ...settings.payment,
+                                    interestRateMonthly: parseFloat(e.target.value) || 1.99,
+                                  },
+                                })
+                              }
+                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl focus:border-red-500 focus:outline-none font-mono"
+                            />
+                            <span className="text-[10px] text-neutral-400">Calculada de forma idêntica no frontend e no backend</span>
+                          </div>
+
+                          <div>
+                            <label className="block text-neutral-300 mb-1 font-medium">
+                              Chave PIX Alternativa (Backup manual)
+                            </label>
                             <input
                               type="text"
-                              value={settings.payment.publicKey || ''}
+                              value={settings.payment.pixKey || ''}
                               onChange={(e) =>
                                 setSettings({
                                   ...settings,
                                   payment: {
                                     ...settings.payment,
-                                    publicKey: e.target.value,
+                                    pixKey: e.target.value,
                                   },
                                 })
                               }
-                              placeholder="APP_USR-..."
-                              className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono focus:border-red-500 focus:outline-none"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-neutral-300 mb-1 font-medium">Mercado Pago Access Token (Backend Seguro)</label>
-                            <input
-                              type="password"
-                              value={settings.payment.accessToken || ''}
-                              onChange={(e) =>
-                                setSettings({
-                                  ...settings,
-                                  payment: {
-                                    ...settings.payment,
-                                    accessToken: e.target.value,
-                                    isConfigured: Boolean(e.target.value),
-                                  },
-                                })
-                              }
-                              placeholder="APP_USR-..."
+                              placeholder="(43) 99837-0350"
                               className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs p-2.5 rounded-xl font-mono focus:border-red-500 focus:outline-none"
                             />
                           </div>
@@ -1614,6 +1717,62 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <div className="flex justify-between pt-2 text-sm font-bold text-white">
                   <span>Total (com frete)</span>
                   <span className="font-mono text-red-400">R$ {selectedOrder.total.toFixed(2).replace('.', ',')}</span>
+                </div>
+              </div>
+
+              {/* Asaas Payment Information */}
+              <div className="bg-[#181818] p-3.5 rounded-xl border border-[#262626] space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="font-bold text-white flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-red-500" />
+                    Situação do Pagamento Asaas
+                  </p>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!selectedOrder) return;
+                      setCheckingAsaasPayment(true);
+                      try {
+                        const updated = await api.checkPaymentStatus(selectedOrder.id);
+                        setSelectedOrder(updated);
+                        setNewStatus(updated.status);
+                        loadTabData();
+                        alert(`Status verificado: ${updated.status === 'approved' ? 'PAGAMENTO APROVADO' : updated.status}`);
+                      } catch (err: any) {
+                        alert(err.message || 'Falha ao verificar status com Asaas.');
+                      } finally {
+                        setCheckingAsaasPayment(false);
+                      }
+                    }}
+                    disabled={checkingAsaasPayment}
+                    className="text-[11px] font-semibold text-red-400 hover:text-red-300 underline cursor-pointer disabled:opacity-50"
+                  >
+                    {checkingAsaasPayment ? 'Consultando...' : 'Consultar Situação no Asaas ⟳'}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-neutral-300">
+                  <div>
+                    <span className="text-neutral-500 block text-[10px]">Forma de Pagamento:</span>
+                    <span className="font-medium text-white">{selectedOrder.paymentMethod === 'pix' ? 'PIX' : 'Cartão de Crédito'}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 block text-[10px]">ID Cobrança Asaas:</span>
+                    <span className="font-mono text-white text-[11px]">{selectedOrder.asaasPaymentId || 'Aguardando chave'}</span>
+                  </div>
+                  {selectedOrder.asaasInvoiceUrl && (
+                    <div className="col-span-2">
+                      <a
+                        href={selectedOrder.asaasInvoiceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] text-red-400 hover:underline flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Visualizar Fatura / Comprovante Asaas
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
 

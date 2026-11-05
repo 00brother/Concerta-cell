@@ -56,11 +56,9 @@ const DEFAULT_CLIENT_SETTINGS: StoreSettings = {
       'Cálculo baseado na tabela de CEPs dos Correios (PAC e SEDEX). Conecte suas credenciais da API dos Correios ou Melhor Envio no painel.',
   },
   payment: {
-    provider: 'mercadopago',
+    provider: 'asaas',
     isConfigured: false,
-    publicKey: '',
-    accessToken: '',
-    webhookSecret: '',
+    environment: 'sandbox',
     maxInstallments: 21,
     maxInterestFree: 3,
     interestRateMonthly: 1.99,
@@ -315,7 +313,7 @@ export const api = {
     };
   },
 
-  // Orders (Synced in Cloud Firestore)
+  // Orders (Processed via Backend Asaas API and Synced with Cloud Firestore)
   async createOrder(payload: any): Promise<Order> {
     const customer = payload?.customer;
     if (!customer) {
@@ -336,119 +334,87 @@ export const api = {
       throw new Error(phoneCheck.error || 'Telefone/WhatsApp inválido.');
     }
 
-    const existingOrders = await cloudDb.getOrders();
-    const count = existingOrders.length + 1001;
-    const orderNumber = `CC-${count}`;
-    const now = new Date().toISOString();
-    // Expiration: Exactly 30 minutes from creation
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    let createdOrder: Order;
 
-    const items = payload.items || [];
-    let subtotal = 0;
-    const allProds = await this.getProducts({ activeOnly: false });
-
-    const verifiedItems = items.map((it: any) => {
-      const prod = allProds.find((p) => p.id === it.productId);
-      const price = prod?.promotionalPrice || prod?.price || it.price || 0;
-      const qty = it.quantity || 1;
-      subtotal += price * qty;
-      return {
-        productId: it.productId,
-        productName: prod?.name || it.productName || 'Produto',
-        price,
-        quantity: qty,
-        image: prod?.images?.[0] || './logo.png',
-      };
-    });
-
-    const isPickup = payload.shippingSelection?.id === 'pickup' || payload.shippingOptionId === 'pickup';
-    const shippingOption: ShippingOption = isPickup
-      ? {
-          id: 'pickup',
-          title: 'Retirar no Local — Balcão Conserta Cell',
-          price: 0,
-          estimatedDays: 'Pronto em até 2 horas úteis',
-          isLocal: true,
-          description: 'Retirada gratuita na loja física em Arapongas/PR.',
-        }
-      : payload.shippingSelection || {
-          id: 'local',
-          title: 'Entrega Local',
-          price: 10,
-          estimatedDays: '1 dia útil',
-          isLocal: true,
-          description: 'Entrega local em Arapongas',
-        };
-
-    const total = Number((subtotal + shippingOption.price).toFixed(2));
-    const settings = await this.getSettings();
-
-    // Generate real Central Bank of Brazil compliant PIX BR Code & high-res QR code
-    let pixCode: string | undefined = undefined;
-    let pixQrCodeBase64: string | undefined = undefined;
-
-    if (payload.paymentMethod === 'pix' || !payload.paymentMethod) {
-      const pixKey = settings.payment.pixKey || '43998370350';
-      const cleanKey = pixKey.trim();
-      pixCode = generatePixBrCode({
-        key: cleanKey,
-        recipientName: settings.payment.pixRecipientName || settings.companyName || 'CONSERTA CELL',
-        city: 'ARAPONGAS',
-        amount: total,
-        txId: `CC${orderNumber.replace(/\D/g, '')}`,
-        description: `Pedido ${orderNumber}`,
+    // 1. Send to server-side Asaas processing route
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
 
-      try {
-        pixQrCodeBase64 = await generatePixQrCodeDataUrl(pixCode);
-      } catch (err) {
-        console.warn('[Pix] Falha ao gerar QR Code local:', err);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `Erro ao processar pedido no servidor (HTTP ${response.status})`
+        );
       }
+
+      createdOrder = await response.json();
+    } catch (err: any) {
+      // If server returned a business error (e.g. Card rejected, missing key), throw it directly
+      if (err.message && !err.message.includes('Failed to fetch')) {
+        throw err;
+      }
+
+      // If server is unreachable in purely static mode, create locally in Firestore
+      console.warn('[API] Servidor local indisponível, registrando pedido diretamente no Firestore:', err);
+      const existingOrders = await cloudDb.getOrders();
+      const count = existingOrders.length + 1001;
+      const orderNumber = `CC-${count}`;
+      const now = new Date().toISOString();
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+      createdOrder = {
+        id: `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        orderNumber,
+        customer: payload.customer,
+        items: payload.items,
+        subtotal: payload.items.reduce((acc: number, it: any) => acc + (it.price * it.quantity), 0),
+        shippingCost: payload.shippingSelection?.price || 0,
+        shippingSelection: payload.shippingSelection,
+        total: (payload.items.reduce((acc: number, it: any) => acc + (it.price * it.quantity), 0) + (payload.shippingSelection?.price || 0)),
+        paymentMethod: payload.paymentMethod || 'pix',
+        installments: payload.installments,
+        status: 'pending',
+        statusHistory: [
+          {
+            status: 'pending',
+            timestamp: now,
+            note: 'Pedido registrado no sistema. Aguardando pagamento.',
+          },
+        ],
+        cardBrand: payload.cardBrand,
+        cardLast4: payload.cardLast4,
+        expiresAt,
+        createdAt: now,
+        updatedAt: now,
+      };
     }
 
-    const newOrder: Order = {
-      id: `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      orderNumber,
-      customer: payload.customer,
-      items: verifiedItems,
-      subtotal: Number(subtotal.toFixed(2)),
-      shippingCost: shippingOption.price,
-      shippingSelection: shippingOption,
-      total,
-      paymentMethod: payload.paymentMethod || 'pix',
-      installments: payload.installments,
-      status: 'pending',
-      statusHistory: [
-        {
-          status: 'pending',
-          timestamp: now,
-          note: 'Pedido registrado com sucesso no sistema. Aguardando pagamento em até 30 minutos.',
-        },
-      ],
-      pixCode,
-      pixQrCodeBase64,
-      cardBrand: payload.cardBrand,
-      cardLast4: payload.cardLast4,
-      expiresAt,
-      createdAt: now,
-      updatedAt: now,
-    };
+    // 2. Sync order seamlessly to Cloud Firestore database
+    try {
+      await cloudDb.createOrder(createdOrder);
+    } catch (cloudErr) {
+      console.warn('[API] Falha ao sincronizar pedido no Firestore:', cloudErr);
+    }
 
-    // Save to Cloud Firestore
-    await cloudDb.createOrder(newOrder);
-
-    // Decrement stock in Cloud Firestore safely without modifying price or details
-    for (const it of verifiedItems) {
+    // 3. Decrement stock in Cloud Firestore
+    const allProds = await this.getProducts({ activeOnly: false });
+    for (const it of createdOrder.items || []) {
       const prod = allProds.find((p) => p.id === it.productId);
       if (prod) {
         const newStock = Math.max(0, prod.stock - it.quantity);
         prod.stock = newStock;
-        await cloudDb.updateProductStock(prod.id, newStock);
+        cloudDb.updateProductStock(prod.id, newStock).catch(() => {});
       }
     }
     localCache.saveProducts(allProds);
 
-    return newOrder;
+    return createdOrder;
   },
 
   async getOrder(idOrNumber: string): Promise<Order> {
@@ -561,5 +527,58 @@ export const api = {
 
     await cloudDb.saveAdminCreds(targetUser, targetPass);
     return { message: 'Credenciais de acesso atualizadas com sucesso na nuvem. Faça login novamente.' };
+  },
+
+  // Check payment status with Asaas in real-time
+  async checkPaymentStatus(orderIdOrNumber: string): Promise<Order> {
+    try {
+      const res = await fetch(`/api/orders/${orderIdOrNumber}/payment-status`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.order) {
+          if (data.updated) {
+            await cloudDb.updateOrderStatus(
+              data.order.id,
+              data.order.status,
+              'Pagamento confirmado pelo Asaas.'
+            ).catch(() => {});
+          }
+          return data.order;
+        }
+      }
+    } catch {
+      // Fallback to Firestore
+    }
+    return this.getOrder(orderIdOrNumber);
+  },
+
+  // Get Asaas server status for Admin Panel
+  async getAdminAsaasStatus(token: string): Promise<{
+    isConfigured: boolean;
+    environment: 'sandbox' | 'production';
+    maskedKey: string;
+    webhookConfigured: boolean;
+    provider: string;
+  }> {
+    try {
+      const res = await fetch('/api/admin/asaas/status', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Ignore
+    }
+    const settings = await this.getSettings();
+    return {
+      isConfigured: settings.payment.isConfigured,
+      environment: settings.payment.environment || 'sandbox',
+      maskedKey: settings.payment.apiKey ? `${settings.payment.apiKey.substring(0, 6)}••••` : '',
+      webhookConfigured: Boolean(settings.payment.webhookAccessToken),
+      provider: 'asaas',
+    };
   },
 };

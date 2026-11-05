@@ -54,8 +54,11 @@ export interface StoreSettings {
     fallbackNote: string;
   };
   payment: {
-    provider: 'mercadopago' | 'pix_direct';
+    provider: 'asaas' | 'mercadopago' | 'pix_direct';
     isConfigured: boolean;
+    environment?: 'sandbox' | 'production';
+    apiKey?: string;
+    webhookAccessToken?: string;
     publicKey?: string;
     accessToken?: string;
     webhookSecret?: string;
@@ -144,6 +147,10 @@ export interface Order {
   pixQrCodeBase64?: string;
   cardBrand?: string;
   cardLast4?: string;
+  asaasPaymentId?: string;
+  asaasCustomerId?: string;
+  asaasInvoiceUrl?: string;
+  asaasStatus?: string;
   mpPaymentId?: string;
   trackingCode?: string;
   expiresAt?: string;
