@@ -277,8 +277,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <div className="flex justify-between">
                 <span>Frete</span>
                 {shippingOption ? (
-                  <span className="font-mono font-semibold text-white">
-                    R$ {shippingOption.price.toFixed(2).replace('.', ',')}
+                  <span className={`font-mono font-semibold ${shippingOption.price === 0 ? 'text-emerald-400' : 'text-white'}`}>
+                    {shippingOption.price === 0 ? 'GRÁTIS' : `R$ ${shippingOption.price.toFixed(2).replace('.', ',')}`}
                   </span>
                 ) : (
                   <span className="text-[11px] text-neutral-400">Calcular acima</span>

@@ -334,6 +334,16 @@ apiRouter.post('/orders', async (req: Request, res: Response) => {
     cardBrand,
   } = req.body;
 
+  // If in-store pickup, populate default store address if missing
+  if (shippingOptionId === 'pickup' && customer) {
+    if (!customer.street || !customer.street.trim()) customer.street = 'Retirada no Balcão Conserta Cell';
+    if (!customer.number || !customer.number.trim()) customer.number = 'Loja Física';
+    if (!customer.neighborhood || !customer.neighborhood.trim()) customer.neighborhood = 'Centro';
+    if (!customer.city || !customer.city.trim()) customer.city = 'Arapongas';
+    if (!customer.state || !customer.state.trim()) customer.state = 'PR';
+    if (!customer.cep || !customer.cep.trim()) customer.cep = '86700-000';
+  }
+
   if (
     !customer ||
     !customer.fullName ||

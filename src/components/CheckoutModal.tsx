@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Loader2,
   Lock,
+  Store,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext.tsx';
 import type { CustomerInfo, Order, ShippingOption, StoreSettings } from '../types/index.ts';
@@ -181,6 +182,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const detectedBrand = detectBrand(cardNumber);
   const shippingCost = shippingOption?.price || 0;
+  const isPickup = shippingOption?.id === 'pickup';
   const grandTotal = subtotal + shippingCost;
 
   // Installment calculations: up to 3x sem juros, up to 21x with monthly rate
@@ -441,97 +443,128 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </div>
             </div>
 
-            {/* 2. Delivery Address */}
+            {/* 2. Delivery Address or In-Store Pickup */}
             <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-red-500 pb-1 border-b border-[#222222]">
-                2. Endereço de Entrega
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs text-neutral-300 mb-1">
-                    CEP * {viaCepLoading && <span className="text-red-400 text-[10px]">(Buscando...)</span>}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.cep}
-                    onChange={handleCepChange}
-                    placeholder="86700-000"
-                    maxLength={9}
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500 font-mono"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs text-neutral-300 mb-1">Rua / Logradouro *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.street}
-                    onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                    placeholder="Rua / Avenida"
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-neutral-300 mb-1">Número *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.number}
-                    onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-                    placeholder="123"
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs text-neutral-300 mb-1">Bairro *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.neighborhood}
-                    onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
-                    placeholder="Bairro"
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-neutral-300 mb-1">Complemento</label>
-                  <input
-                    type="text"
-                    value={formData.complement}
-                    onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
-                    placeholder="Apto, Bloco..."
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-neutral-300 mb-1">Cidade</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-neutral-300 mb-1">Estado</label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={2}
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
-                    className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
-                  />
-                </div>
+              <div className="flex items-center justify-between pb-1 border-b border-[#222222]">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-red-500">
+                  2. {isPickup ? 'Local de Retirada' : 'Endereço de Entrega'}
+                </h3>
+                {isPickup && (
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/70 border border-emerald-800/60 px-2 py-0.5 rounded flex items-center gap-1">
+                    <Store className="w-3 h-3" />
+                    <span>Retirada no Balcão · Frete Grátis</span>
+                  </span>
+                )}
               </div>
+
+              {isPickup ? (
+                <div className="p-3.5 bg-emerald-950/30 border border-emerald-800/60 rounded-xl space-y-2 text-xs">
+                  <div className="flex items-start gap-2.5">
+                    <Store className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="font-bold text-white text-xs sm:text-sm">
+                        Balcão da Loja Física Conserta Cell
+                      </p>
+                      <p className="text-neutral-300">
+                        {settings?.address || 'Rua das Pombas, 456 - Centro, Arapongas/PR'}
+                      </p>
+                      <p className="text-emerald-400 font-semibold text-[11px]">
+                        ✓ Pronto para retirada em até 2 horas úteis após a confirmação.
+                      </p>
+                      <p className="text-neutral-400 text-[10px] leading-relaxed">
+                        Não é necessário preencher endereço residencial. Ao comparecer na loja, basta apresentar seu documento com foto ou o número do pedido gerado.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-neutral-300 mb-1">
+                      CEP * {viaCepLoading && <span className="text-red-400 text-[10px]">(Buscando...)</span>}
+                    </label>
+                    <input
+                      type="text"
+                      required={!isPickup}
+                      value={formData.cep}
+                      onChange={handleCepChange}
+                      placeholder="86700-000"
+                      maxLength={9}
+                      className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500 font-mono"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs text-neutral-300 mb-1">Rua / Logradouro *</label>
+                    <input
+                      type="text"
+                      required={!isPickup}
+                      value={formData.street}
+                      onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                      placeholder="Rua / Avenida"
+                      className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-neutral-300 mb-1">Número *</label>
+                    <input
+                      type="text"
+                      required={!isPickup}
+                      value={formData.number}
+                      onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                      placeholder="123"
+                      className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs text-neutral-300 mb-1">Bairro *</label>
+                    <input
+                      type="text"
+                      required={!isPickup}
+                      value={formData.neighborhood}
+                      onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                      placeholder="Bairro"
+                      className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-neutral-300 mb-1">Complemento</label>
+                    <input
+                      type="text"
+                      value={formData.complement}
+                      onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                      placeholder="Apto, Bloco..."
+                      className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-neutral-300 mb-1">Cidade *</label>
+                    <input
+                      type="text"
+                      required={!isPickup}
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-neutral-300 mb-1">Estado *</label>
+                    <input
+                      type="text"
+                      required={!isPickup}
+                      maxLength={2}
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
+                      className="w-full bg-[#1b1b1b] border border-[#333333] text-white text-base sm:text-xs px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 3. Automatic Shipping Options (Arapongas or Correios PAC / SEDEX) */}
