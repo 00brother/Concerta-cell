@@ -33,12 +33,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) =
             referrerPolicy="no-referrer"
             className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = '/logo.png';
+              (e.target as HTMLImageElement).src = './logo.png';
             }}
           />
         ) : (
           <div className="flex flex-col items-center justify-center text-neutral-500 p-4 text-center">
-            <img src="/logo.png" alt="Conserta Cell" className="h-10 opacity-40 mb-2 object-contain" />
+            <img src="./logo.png" alt="Conserta Cell" className="h-10 opacity-40 mb-2 object-contain" />
             <span className="text-xs">Foto sob consulta</span>
           </div>
         )}

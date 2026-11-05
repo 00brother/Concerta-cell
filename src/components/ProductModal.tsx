@@ -87,7 +87,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   };
 
   const productImages =
-    product.images && product.images.length > 0 ? product.images : ['/logo.png'];
+    product.images && product.images.length > 0 ? product.images : ['./logo.png'];
 
   const whatsappMessage = encodeURIComponent(
     `Olá Conserta Cell! Gostaria de mais informações sobre o produto: "${product.name}" (R$ ${currentPrice.toFixed(2).replace('.', ',')}).`
@@ -110,12 +110,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           <div className="md:col-span-6 flex flex-col space-y-4">
             <div className="aspect-square bg-[#1a1a1a] rounded-xl border border-[#2a2a2a] p-4 flex items-center justify-center overflow-hidden">
               <img
-                src={productImages[selectedImageIndex] || '/logo.png'}
+                src={productImages[selectedImageIndex] || './logo.png'}
                 alt={product.name}
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-contain"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/logo.png';
+                  (e.target as HTMLImageElement).src = './logo.png';
                 }}
               />
             </div>
@@ -136,7 +136,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       alt=""
                       className="w-full h-full object-contain"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/logo.png';
+                        (e.target as HTMLImageElement).src = './logo.png';
                       }}
                     />
                   </button>

@@ -28,7 +28,7 @@ export const Footer: React.FC<FooterProps> = ({
           <div className="lg:col-span-4 space-y-4">
             <div className="bg-black/50 inline-block p-2 rounded-xl border border-red-950/60">
               <img
-                src="/logo.png"
+                src="./logo.png"
                 alt="Conserta Cell"
                 className="h-14 w-auto object-contain"
                 referrerPolicy="no-referrer"

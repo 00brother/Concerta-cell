@@ -20,7 +20,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ settings }) => {
             <div className="relative w-full max-w-md bg-gradient-to-b from-[#1a0507] to-[#0d0d0d] p-8 rounded-2xl border-2 border-red-700/60 shadow-2xl shadow-red-950/70 text-center">
               <div className="py-8 px-6 bg-black/70 rounded-xl border border-red-900/60 mb-6 flex items-center justify-center">
                 <img
-                  src="/logo.png"
+                  src="./logo.png"
                   alt="Conserta Cell - Acessórios e Manutenção de Celulares"
                   className="max-h-36 w-auto object-contain drop-shadow-[0_8px_20px_rgba(229,9,20,0.5)]"
                   referrerPolicy="no-referrer"

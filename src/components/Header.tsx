@@ -72,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-2.5 shrink-0 group"
           >
             <img
-              src="/logo.png"
+              src="./logo.png"
               alt="Conserta Cell"
               className="h-9 sm:h-11 w-auto object-contain transition-transform group-hover:scale-102"
               referrerPolicy="no-referrer"

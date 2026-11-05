@@ -233,7 +233,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         stock: parseInt(prodForm.stock, 10),
         weightKg: parseFloat(prodForm.weightKg) || 0.3,
         description: prodForm.description,
-        images: prodForm.imageUrl ? [prodForm.imageUrl] : ['/logo.png'],
+        images: prodForm.imageUrl ? [prodForm.imageUrl] : ['./logo.png'],
         active: prodForm.active,
         featured: prodForm.featured,
       };
@@ -519,6 +519,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               >
                 {loginLoading ? 'Verificando credenciais...' : 'Entrar no Painel'}
               </button>
+
+              <div className="text-center pt-2">
+                <p className="text-[11px] text-neutral-400">
+                  Credenciais padrão para demonstração: <span className="font-mono text-white bg-neutral-800 px-1.5 py-0.5 rounded">admin</span> / <span className="font-mono text-white bg-neutral-800 px-1.5 py-0.5 rounded">admin123</span>
+                </p>
+                <p className="text-[10px] text-neutral-500 mt-1">
+                  (Você pode alterar seu usuário e senha com segurança na aba &ldquo;Segurança&rdquo;)
+                </p>
+              </div>
             </form>
           </div>
         ) : (
@@ -636,11 +645,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           <div className="flex gap-3">
                             <div className="w-16 h-16 bg-[#1a1a1a] rounded-lg border border-[#2a2a2a] p-1 flex items-center justify-center shrink-0 overflow-hidden">
                               <img
-                                src={p.images[0] || '/logo.png'}
+                                src={p.images[0] || './logo.png'}
                                 alt=""
                                 className="w-full h-full object-contain"
                                 onError={(e) => {
-                                  (e.target as HTMLImageElement).src = '/logo.png';
+                                  (e.target as HTMLImageElement).src = './logo.png';
                                 }}
                               />
                             </div>

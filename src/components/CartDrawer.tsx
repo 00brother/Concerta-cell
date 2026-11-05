@@ -138,11 +138,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     {/* Thumbnail */}
                     <div className="w-16 h-16 bg-[#111111] rounded-lg border border-[#222222] p-1 shrink-0 flex items-center justify-center overflow-hidden">
                       <img
-                        src={item.product.images[0] || '/logo.png'}
+                        src={item.product.images[0] || './logo.png'}
                         alt={item.product.name}
                         className="w-full h-full object-contain"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/logo.png';
+                          (e.target as HTMLImageElement).src = './logo.png';
                         }}
                       />
                     </div>
