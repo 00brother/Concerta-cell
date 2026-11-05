@@ -225,18 +225,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     if (!token) return;
 
     try {
-      const payload = {
+      const payload: Record<string, any> = {
         name: prodForm.name,
         category: prodForm.category,
-        price: parseFloat(prodForm.price),
-        promotionalPrice: prodForm.promotionalPrice ? parseFloat(prodForm.promotionalPrice) : undefined,
-        stock: parseInt(prodForm.stock, 10),
+        price: parseFloat(prodForm.price) || 0,
+        stock: parseInt(prodForm.stock, 10) || 0,
         weightKg: parseFloat(prodForm.weightKg) || 0.3,
-        description: prodForm.description,
+        description: prodForm.description || '',
         images: prodForm.imageUrl ? [prodForm.imageUrl] : ['./logo.png'],
         active: prodForm.active,
         featured: prodForm.featured,
       };
+
+      if (prodForm.promotionalPrice && !isNaN(parseFloat(prodForm.promotionalPrice))) {
+        payload.promotionalPrice = parseFloat(prodForm.promotionalPrice);
+      }
 
       if (editingProduct) {
         await api.updateAdminProduct(editingProduct.id, payload, token);

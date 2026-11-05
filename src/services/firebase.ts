@@ -9,7 +9,6 @@ import {
   updateDoc,
   deleteDoc,
   query,
-  orderBy,
   where,
   getDocFromServer,
 } from 'firebase/firestore';
@@ -32,9 +31,34 @@ export async function testFirestoreConnection(): Promise<boolean> {
       console.warn('[Firestore] Cliente offline ou aguardando conexão.');
       return false;
     }
-    // Expected if doc doesn't exist, but connection is alive
     return true;
   }
+}
+
+/**
+ * Recursively removes all `undefined` fields from an object or array.
+ * Firestore strictly rejects JavaScript `undefined` as a field value.
+ */
+function sanitizeForFirestore<T>(data: T): T {
+  if (data === undefined) {
+    return null as any;
+  }
+  if (data === null) {
+    return null as any;
+  }
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizeForFirestore(item)) as any;
+  }
+  if (typeof data === 'object' && !(data instanceof Date)) {
+    const clean: Record<string, any> = {};
+    for (const [key, val] of Object.entries(data as Record<string, any>)) {
+      if (val !== undefined) {
+        clean[key] = sanitizeForFirestore(val);
+      }
+    }
+    return clean as any;
+  }
+  return data;
 }
 
 // -------------------------------------------------------------
@@ -86,14 +110,19 @@ export const cloudDb = {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
 
-    const product: Product = {
+    const hasPromo = productData.promotionalPrice !== undefined && 
+                     productData.promotionalPrice !== null && 
+                     productData.promotionalPrice !== '' && 
+                     !isNaN(Number(productData.promotionalPrice)) && 
+                     Number(productData.promotionalPrice) > 0;
+
+    const rawProduct: Record<string, any> = {
       id: prodId,
-      name: productData.name,
+      name: productData.name || 'Produto',
       slug,
       description: productData.description || '',
       category: productData.category || 'Geral',
       price: Number(productData.price) || 0,
-      promotionalPrice: productData.promotionalPrice ? Number(productData.promotionalPrice) : undefined,
       stock: Number(productData.stock) || 0,
       images: Array.isArray(productData.images) && productData.images.length > 0 ? productData.images : ['./logo.png'],
       active: productData.active !== undefined ? Boolean(productData.active) : true,
@@ -106,9 +135,14 @@ export const cloudDb = {
       updatedAt: now,
     };
 
-    await setDoc(doc(firestore, 'products', prodId), product, { merge: true });
-    await this.addLog('PRODUCT_SAVE', `Produto "${product.name}" salvo no banco em nuvem.`);
-    return product;
+    if (hasPromo) {
+      rawProduct.promotionalPrice = Number(productData.promotionalPrice);
+    }
+
+    const sanitized = sanitizeForFirestore(rawProduct);
+    await setDoc(doc(firestore, 'products', prodId), sanitized, { merge: true });
+    await this.addLog('PRODUCT_SAVE', `Produto "${rawProduct.name}" salvo no banco em nuvem.`);
+    return sanitized as Product;
   },
 
   async deleteProduct(id: string): Promise<void> {
@@ -131,9 +165,10 @@ export const cloudDb = {
   },
 
   async saveSettings(settings: StoreSettings): Promise<StoreSettings> {
-    await setDoc(doc(firestore, 'settings', 'consertacell_main'), settings, { merge: true });
+    const sanitized = sanitizeForFirestore(settings);
+    await setDoc(doc(firestore, 'settings', 'consertacell_main'), sanitized, { merge: true });
     await this.addLog('SETTINGS_UPDATE', 'Configurações da loja atualizadas no banco em nuvem.');
-    return settings;
+    return sanitized as StoreSettings;
   },
 
   // 3. ADMIN CREDENTIALS
@@ -157,24 +192,26 @@ export const cloudDb = {
   },
 
   async saveAdminCreds(username: string, passwordHash: string): Promise<void> {
-    await setDoc(doc(firestore, 'settings', 'consertacell_auth'), {
+    const payload = sanitizeForFirestore({
       username,
       passwordHash,
       updatedAt: new Date().toISOString(),
     });
+    await setDoc(doc(firestore, 'settings', 'consertacell_auth'), payload);
     await this.addLog('AUTH_UPDATE', `Credenciais do administrador alteradas para usuário "${username}".`);
   },
 
   // 4. ORDERS
   async createOrder(order: Order): Promise<Order> {
-    await setDoc(doc(firestore, 'orders', order.id), order);
+    const sanitized = sanitizeForFirestore(order);
+    await setDoc(doc(firestore, 'orders', order.id), sanitized);
     await this.addLog('ORDER_CREATE', `Pedido ${order.orderNumber} registrado no banco em nuvem (R$ ${order.total.toFixed(2)}).`);
-    return order;
+    return sanitized as Order;
   },
 
   async getOrder(idOrNumber: string): Promise<Order | null> {
     try {
-      // First try by direct ID
+      // Direct ID
       const direct = await getDoc(doc(firestore, 'orders', idOrNumber));
       if (direct.exists()) {
         return direct.data() as Order;
@@ -232,33 +269,35 @@ export const cloudDb = {
       },
     ];
 
-    const updates: Partial<Order> = {
+    const updates: Record<string, any> = {
       status,
       updatedAt: now,
       statusHistory: updatedHistory,
     };
-    if (trackingCode !== undefined) {
+    if (trackingCode !== undefined && trackingCode !== null && trackingCode !== '') {
       updates.trackingCode = trackingCode;
     }
 
-    await updateDoc(doc(firestore, 'orders', existing.id), updates);
+    const sanitized = sanitizeForFirestore(updates);
+    await updateDoc(doc(firestore, 'orders', existing.id), sanitized);
     await this.addLog('ORDER_STATUS_UPDATE', `Pedido ${existing.orderNumber} atualizado para status "${status}".`);
-    return { ...existing, ...updates };
+    return { ...existing, ...sanitized } as Order;
   },
 
   // 5. AUDIT LOGS
   async addLog(action: string, details: string): Promise<void> {
     try {
       const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      await setDoc(doc(firestore, 'audit_logs', logId), {
+      const log = sanitizeForFirestore({
         id: logId,
         timestamp: new Date().toISOString(),
         action,
         details,
         ip: 'Cloud Firestore',
       });
+      await setDoc(doc(firestore, 'audit_logs', logId), log);
     } catch {
-      // Non-blocking log error
+      // Non-blocking
     }
   },
 
